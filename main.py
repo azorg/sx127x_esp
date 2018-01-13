@@ -44,16 +44,16 @@ def on_receive(lora, payload):
 lora = LORA() # init LoRa subsystem
 lora.setFrequency(434000, 0)   # kHz, Hz
 lora.setTxPower(13)            # power +13dBm
-lora.setSignalBandwidth(250e3) # BW [7.8e3...500e3 Hz]
-lora.setSpreadingFactor(9)     # SF 6...12
-lora.setLDR(True)              # Low Datarate Optimize
-lora.setCodingRate(8)          # 5..8
+lora.setSignalBandwidth(125e3) # BW [7.8e3...500e3] Hz
+lora.setSpreadingFactor(10)    # SF 6...12
+lora.setLDR(False)             # Low Datarate Optimize
+lora.setCodingRate(5)          # 5..8
 lora.setPreambleLength(8)      # 6..65000 (8 by default)
 lora.setSyncWord(0x12)         # allways 0x12
 lora.enableCRC(False)          # CRC off
 lora.collect()
 
-if 1:
+if 0:
     # reseiver
     lora.onReceive(on_receive) # register the receive callback
     lora.receive() # go into receive mode
