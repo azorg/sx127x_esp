@@ -329,15 +329,15 @@ class LORA:
                            (self.readRegister(REG_MODEM_CONFIG_3) & ~0x08) | 0x08 if ldr else 0)
 
     def setSignalBandwidth(self, sbw):        
-        bins = (7.8e3, 10.4e3, 15.6e3, 20.8e3, 31.25e3, 41.7e3, 62.5e3, 125e3, 250e3)
+        bins = (7.8e3, 10.4e3, 15.6e3, 20.8e3, 31.25e3, 41.7e3, 62.5e3, 125e3, 250e3, 500e3)
         
-        bw = 9        
+        bw = 9 # max 500kHz
         for i in range(len(bins)):
             if sbw <= bins[i]:
                 bw = i
                 break
         
-        self.writeRegister(REG_MODEM_CONFIG_1, (self.readRegister(REG_MODEM_CONFIG_1) & 0x0f) | (bw << 4))
+        self.writeRegister(REG_MODEM_CONFIG_1, (self.readRegister(REG_MODEM_CONFIG_1) & 0x0F) | (bw << 4))
 
 
     def setCodingRate(self, denominator):

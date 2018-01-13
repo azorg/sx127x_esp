@@ -55,4 +55,11 @@ http://micropython.org/download#esp8266
 
 > sudo cp ./mpy-cross /usr/local/bin
 
+# Load python examples to module
+
+> mpy-cross -O3 lora.py
+
+> ampy --port /dev/ttyUSB0 put lora.mpy
+
+> ampy --port /dev/ttyUSB0 put main.py
 
