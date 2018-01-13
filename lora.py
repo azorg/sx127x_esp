@@ -71,7 +71,7 @@ class LORA:
                                'tx_power_level':   10,
                                'signal_bandwidth': 125e3, 
                                'spreading_factor': 10,
-                               'ldro':             None, # Low Data Rate Optimize
+                               'ldr' :             None, # Low Data Rate Optimize
                                'coding_rate':      5,
                                'preamble_length':  8, 
                                'implicit_header':  False,
@@ -196,10 +196,10 @@ class LORA:
         self.implicitHeaderMode(self.parameters['implicit_header'])      
         sf = self.parameters['spreading_factor']
         self.setSpreadingFactor(sf)
-        ldro = self.parameters['ldro']
-        if ldro == None:
-            ldro = True if sf >= 10 else False
-        self.setLDRO(ldro)
+        ldr = self.parameters['ldr']
+        if ldr == None:
+            ldr = True if sf >= 10 else False
+        self.setLDR(ldr)
         self.setCodingRate(self.parameters['coding_rate'])
         self.setPreambleLength(self.parameters['preamble_length'])
         self.setSyncWord(self.parameters['sync_word'])
@@ -232,7 +232,7 @@ class LORA:
         # clear IRQ's
         self.writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK)
         
-        self.collect_garbage()
+        self.collect()
    
 
     def write(self, buffer):
@@ -324,9 +324,9 @@ class LORA:
         self.writeRegister(REG_MODEM_CONFIG_3,
                            self.readRegister(REG_MODEM_CONFIG_3) | 0x04)
 
-    def setLDRO(self, ldro):
+    def setLDR(self, ldr):
         self.writeRegister(REG_MODEM_CONFIG_3,
-                           (self.readRegister(REG_MODEM_CONFIG_3) & ~0x08) | 0x08 if ldro else 0)
+                           (self.readRegister(REG_MODEM_CONFIG_3) & ~0x08) | 0x08 if ldr else 0)
 
     def setSignalBandwidth(self, sbw):        
         bins = (7.8e3, 10.4e3, 15.6e3, 20.8e3, 31.25e3, 41.7e3, 62.5e3, 125e3, 250e3)
@@ -347,8 +347,8 @@ class LORA:
         
 
     def setPreambleLength(self, length):
-        self.writeRegister(REG_PREAMBLE_MSB,  (length >> 8) & 0xff)
-        self.writeRegister(REG_PREAMBLE_LSB,  (length >> 0) & 0xff)
+        self.writeRegister(REG_PREAMBLE_MSB,  (length >> 8) & 0xFF)
+        self.writeRegister(REG_PREAMBLE_LSB,  (length >> 0) & 0xFF)
         
         
     def enableCRC(self, enable_CRC = False):
@@ -448,11 +448,11 @@ class LORA:
         for i in range(packetLength):
             payload.append(self.readRegister(REG_FIFO))
         
-        self.collect_garbage()
+        self.collect()
         return bytes(payload)
                         
 
-    def collect_garbage(self):
+    def collect(self):
         gc.collect()
         #if MICROPYTHON:
         #    print('[Memory - free: {}   allocated: {}]'.format(gc.mem_free(), gc.mem_alloc()))
