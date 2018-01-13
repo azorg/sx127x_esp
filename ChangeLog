@@ -1,0 +1,9 @@
+2018.01.11
+ + start project
+
+2018.01.13
+ * first test
+ * echange MSB and LSB of RF frequency
+ + add setLDRO() - set LowDataRateOptimize bit
+
+
