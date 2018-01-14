@@ -118,9 +118,11 @@ REG_PREAMBLE_LSB   = 0x21
 REG_PAYLOAD_LENGTH = 0x22
 REG_MODEM_CONFIG_3 = 0x26
 REG_RSSI_WIDEBAND  = 0x2C
+
 REG_DETECTION_OPTIMIZE  = 0x31
+REG_INVERT_IQ           = 0x33
 REG_DETECTION_THRESHOLD = 0x37
-REG_SYNC_WORD      = 0x39
+REG_SYNC_WORD           = 0x39
 
 
 # Modes, REG_OP_MODE register (0x01 address)
@@ -150,13 +152,8 @@ MODE_ACCESS_SHARED_REG = 0b01000000 # 0x40 [LoRa mode only]
 MODE_LONG_RANGE = 0b10000000 # 0x80
 
 
-# Constants
-PA_OUTPUT_RFO_PIN      = 0
-PA_OUTPUT_PA_BOOST_PIN = 1
-
-
-# PA config
-PA_BOOST = 0x80
+# REG_PA_CONFIG bits
+PA_SELECT = 0x80 # bit 7: PA Select
 
 # IRQ masks
 IRQ_TX_DONE_MASK           = 0x08
@@ -290,6 +287,13 @@ class LORA:
         self.writeRegister(REG_OP_MODE, sleep)  # write "long range" bit
         self.writeRegister(REG_OP_MODE, mode)   # restore old mode
 
+    def invertIQ(self, invert=True):
+        reg = self.readRegister(REG_INVERT_IQ)
+        if invert:
+            reg |=  0b1000000
+        else:
+            reg &= ~0b1000000
+        self.writeRegister(REG_INVERT_IQ, reg)
 
     def fsk(self, fsk=True):
         self.lora(not fsk)
@@ -439,19 +443,28 @@ class LORA:
         return (self.readRegister(REG_PKT_SNR_VALUE)) * 0.25
         
        
-    def setTxPower(self, level, outputPin=PA_OUTPUT_PA_BOOST_PIN):
-        if (outputPin == PA_OUTPUT_RFO_PIN):
-            # Pout = 0...15 dBm
-            # RFO => Pmax = 10.8 + 0.6 * 7 ~ 15 dBm (Pout = Pmax - (15 - level))
-            level = min(max(level, 0), 14)
-            self.writeRegister(REG_PA_CONFIG, 0x70 | level)
+    def setTxPower(self, level, PaSelect=True, MaxPower=7):
+        MaxPower = min(max(MaxPower, 0), 7)
+        if (not PaSelect):
+            # Select RFO pin: Pout is limited to ~14..15 dBm
+            # Pmax = 10.8 + 0.6 * MaxPower  [dBm]
+            # Pout = Pmax - (15 - OutputPower)) = 0...15 dBm if MaxPower=7
+            OutputPower = min(max(level, 0), 15)
+            self.writeRegister(REG_PA_CONFIG, (MaxPower << 4) | OutputPower)
         else:
-            # Pout = 2...17 dBm
-            # PA BOOST => Pmax ~ 20 dBm (Pout = 17 - (15 - (level - 2)) dBm
-            level = min(max(level, 2), 17)
-            self.writeRegister(REG_PA_CONFIG, PA_BOOST | (level - 2))
+            # Select PA BOOST pin: Pout is limited to ~17..20 dBm
+            # Pout = 17 - (15 - OutputPower) dBm
+            OutputPower = min(max(level - 2, 0), 15)
+            self.writeRegister(REG_PA_CONFIG, PA_SELECT | OutputPower)
             
-
+    
+    def setHighPower(self, hp=True):
+        if hp: # +3dB
+            self.writeRegister(REG_PA_DAC, 0x87) # power on PA_BOOST pin up to +20 dBm
+        else:
+            self.writeRegister(REG_PA_DAC, 0x84) # default mode
+    
+    
     def setFrequency(self, freq_kHz, freq_Hz=0):
         self.freq = int(freq_kHz) * 1000 + freq_Hz # kHz + Hz -> Hz
         freq_code = self.freq * 256 // 15625
@@ -521,9 +534,9 @@ class LORA:
             self.writeRegister(REG_IRQ_FLAGS_MASK, self.readRegister(REG_IRQ_FLAGS_MASK) | IRQ_RX_DONE_MASK)
    
    
-    def dumpRegisters(self):
-        for i in range(128):
-            print("0x{0:02X}: {1:02X}".format(i, self.readRegister(i)))
+    #def dumpRegisters(self):
+    #    for i in range(128):
+    #        print("0x{0:02X}: {1:02X}".format(i, self.readRegister(i)))
 
     
     def implicitHeaderMode(self, implicitHeaderMode=False):
@@ -545,7 +558,7 @@ class LORA:
 
     def receive(self, size = 0):
         self.implicitHeaderMode(size > 0)
-        if size > 0: self.writeRegister(REG_PAYLOAD_LENGTH, size & 0xff)  
+        if size > 0: self.writeRegister(REG_PAYLOAD_LENGTH, size & 0xFF)  
         
         # The last packet always starts at FIFO_RX_CURRENT_ADDR
         # no need to reset FIFO_ADDR_PTR
