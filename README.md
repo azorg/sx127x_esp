@@ -2,7 +2,7 @@ Connect Ra-01 module base on LoRaTM sx127x chip to ESP8266 under MicroPython
 ============================================================================
 
 ### Notes
-1. This is example, not software product ready for use
+1. This is experimental example, not software product ready for use
 2. This this free and open source software
 3. Author: Alex Zorg azorg(at)mail.ru
 4. Licenced by GPLv3
