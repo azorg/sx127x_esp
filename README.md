@@ -1,6 +1,15 @@
 Connect Ra-01 module base on LoRaTM sx1278 chip to ESP8266 under MicroPython
 ============================================================================
 
+### Notes
+1. This is example, not software product ready for use.
+2. This this free and open source software.
+3. Author: Alex Zorg azorg(at)mail.ru
+4. Licenced by GPLv3
+5. Some sources based on:
+   * 1. https://github.com/Wei1234c/SX127x_driver_for_MicroPython_on_ESP8266
+   * 2. https://wei1234c.blogspot.tw/2017/08/sx127x-lora-transceiver-driver-for.html
+
 ## Download Micropython firmware
 Go to:
 
@@ -37,31 +46,33 @@ http://micropython.org/download#esp8266
 
 ## Build mpy-cross
 
-> sudo apt-get install build-essential libreadline-dev libffi-dev git
+```
+sudo apt-get install build-essential libreadline-dev libffi-dev git
 
-> git clone --recurse-submodules https://github.com/micropython/micropython.git
+git clone --recurse-submodules https://github.com/micropython/micropython.git
 
-> cd ./micropython/ports/unix
+cd ./micropython/ports/unix
 
-> make axtls
+make axtls
 
-> make
+make
 
-> sudo cp ./micropython /usr/local/bin
+sudo cp ./micropython /usr/local/bin
 
-> cd ../../mpy-cross
+cd ../../mpy-cross
 
-> make
+make
 
-> sudo cp ./mpy-cross /usr/local/bin
+sudo cp ./mpy-cross /usr/local/bin
 
-## Load python examples to module
+ Load python examples to module
 
-> mpy-cross -O3 lora.py
+mpy-cross -O3 lora.py
 
-> ampy --port /dev/ttyUSB0 put lora.mpy
+ampy --port /dev/ttyUSB0 put lora.mpy
 
-> ampy --port /dev/ttyUSB0 put main.py
+ampy --port /dev/ttyUSB0 put main.py
+```
 
 ## Run terminal
 
