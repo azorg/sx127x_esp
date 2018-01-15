@@ -3,7 +3,11 @@
 
 2018.01.13
  * first test
- * echange MSB and LSB of RF frequency
- + add setLDRO() - set LowDataRateOptimize bit
+ * exchange MSB and LSB of RF frequency
+ + add setLDR() - set LowDataRateOptimize bit
 
+2018.01.14
+ * add address of some SX127x registers
 
+2018.01.15
+ * update "REAMDE.md"
