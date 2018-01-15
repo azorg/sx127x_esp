@@ -54,7 +54,7 @@ lora.setSyncWord(0x12)         # allways 0x12
 lora.enableCRC(False)          # CRC off
 lora.collect()
 
-if 0:
+if 1:
     # reseiver
     lora.onReceive(on_receive) # register the receive callback
     lora.receive() # go into receive mode

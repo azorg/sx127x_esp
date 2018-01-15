@@ -1,4 +1,4 @@
-Connect Ra-01 module base on LoRaTM sx127x chip to ESP8266 under MicroPython
+Connect Ra-01 module base on LoRaTM SX127x chip to ESP8266 under MicroPython
 ============================================================================
 
 ### Notes
@@ -19,10 +19,23 @@ http://docs.micropython.org/en/latest/esp8266/esp8266/tutorial/intro.html
 2. "Firmware for ESP8266 boards"
 http://micropython.org/download#esp8266
 
-## Install `esptool` and flash firmware on ESP8266 bord
+## Install `esptool.py` - ESP8266 & ESP32 ROM Bootloader Utility
 ```
-$ pip install esptool
+$ sudo apt-get install python-pip
+$ sudo pip install esptool
+```
+OR
+```
+$ sudo apt-get install python-serial
+$ sudo apt-get install python-ecdsa ecdsautils
+$ sudo apt-get install python-slowaes
+$ git clone https://github.com/espressif/esptool.git
+$ cd esptool
+$ sudo python setup.py install
+```
 
+## Flash firmware on ESP8266 bord
+```
 $ esptool.py --port /dev/ttyUSB0 erase_flash
 $ esptool.py --port /dev/ttyUSB0 --baud 115200 write_flash --flash_size=detect 0 firmware.bin
 ```
@@ -44,7 +57,7 @@ $ esptool.py --port /dev/ttyUSB0 --baud 115200 write_flash --flash_size=detect 0
 |          |     3V     |    3.3V     | 3.3V  (red)     |
 |          |     G      |    GND      | GND   (black)   |
 
-## Build mpy-cross
+## Build `mpy-cross`
 
 ```
 $ sudo apt-get install build-essential libreadline-dev libffi-dev git
@@ -61,6 +74,18 @@ $ make
 $ sudo cp ./mpy-cross /usr/local/bin
 ```
 
+## Install `ampy` - Utility to interact with a MicroPython board over a serial connection
+```
+$ sudo pip install adafruit-ampy
+```
+OR
+```
+$ sudo apt-get install python-click
+$ git clone https://github.com/adafruit/ampy.git
+$ cd ampy
+$ sudo python setup.py install
+```
+
 ## Load python examples to module
 ```
 $ mpy-cross -O3 lora.py
@@ -68,8 +93,12 @@ $ ampy --port /dev/ttyUSB0 put lora.mpy
 $ ampy --port /dev/ttyUSB0 put main.py
 ```
 
-## Run terminal
+## Run terminal (minicom, picocom or screen)
+```
+$ minicom -D /dev/ttyUSB0 -b 115200
 
-> $ picomom /dev/ttyUSB0 -b 115200
+$ picomom /dev/ttyUSB0 -b 115200
 
+$ screen /dev/ttyUSB0 115200
+```
 
