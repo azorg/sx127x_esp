@@ -35,8 +35,8 @@ def on_receive(lora, payload):
     lora.blink()
             
     payload_string = payload.decode()
-    rssi = lora.packetRssi()
-    snr  = lora.packetSnr()
+    rssi = lora.rssi()
+    snr  = lora.snr()
     print("*** Received message ***\n{}".format(payload_string))
     print("RSSI={}, SNR={}\n".format(rssi, snr))
 
