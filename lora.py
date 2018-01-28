@@ -80,10 +80,10 @@ REG_SYNC_VALUE_7    = 0x2E # Sync Word byte 7
 REG_SYNC_VALUE_8    = 0x2F # Sync Word byte 8
 REG_PACKET_CONFIG_1 = 0x30 # Packet mode settings
 REG_PACKET_CONFIG_2 = 0x31 # Packet mode settings
-REG_PAYLOAD_LENGTH  = 0x32 # Payload lenght settings
+REG_PAYLOAD_LEN     = 0x32 # Payload lenght settings
 REG_NODE_ADRS       = 0x33 # Node address
 REG_BROADCAST_ADRS  = 0x34 # Broadcast address
-REG_FIFO_TRESH      = 0x35 # FIFO Theshold, Tx start condition
+REG_FIFO_THRESH     = 0x35 # FIFO Theshold, Tx start condition
 REG_SEQ_CONFIG_1    = 0x36 # Top level Sequencer settings
 REG_SEQ_CONFIG_2    = 0x37 # Top level Sequencer settings
 REG_TIMER_RESOL     = 0x38 # Timer 1 and 2 resolution control
@@ -199,7 +199,7 @@ def get_rx_bw(bw=10.4):
     for m, e, v in RX_BW_TABLE:
         if bw <= v:
             return m, e 
-    return RX_BW_TABLE[-1][:1]
+    return RX_BW_TABLE[-1][:2]
 
 class LORA:
     def __init__(self,
@@ -221,7 +221,8 @@ class LORA:
                          'fdev':             5000.,  # frequency deviation [Hz]
                          'rx_bw':            10.4,   # 2,6...250 kHz
                          'afc_bw':           50.0,   # 2,6...250 kHz
-                         'enable_afc':       True},
+                         'enable_afc':       True,
+                         'fix_len':          False},
                  gpio = {'led':    2,   # blue led
                          'led_on': 0,   # led on level (0 or 1)
                          'reset':  0,   # reset pin
@@ -265,6 +266,7 @@ class LORA:
         self.onReceive(onReceive)        
         #self._lock = False
         self.reset()
+        self.mode = 0 # LoRa mode by default (FIXME)
         self.init(mode, pars)
 
 
@@ -360,6 +362,8 @@ class LORA:
     def setMode(self, mode):
         self.writeRegister(REG_OP_MODE, (self.readRegister(REG_OP_MODE) & ~MODES_MASK) | mode)
 
+    def getMode(self):
+        return self.readRegister(REG_OP_MODE) & MODES_MASK
 
     def sleep(self):
         self.setMode(MODE_SLEEP)
@@ -380,7 +384,7 @@ class LORA:
 
 
     def init(self, mode=None, pars=None):
-        if mode: self.mode = mode
+        if mode is not None: self.mode = mode
         if pars: self.pars = pars
             
         # check version
@@ -430,6 +434,7 @@ class LORA:
             self.rx_bw(     self.pars["rx_bw"])
             self.afc_bw(    self.pars["afc_bw"])
             self.enable_afc(self.pars["enable_afc"])
+            self.fix_len(   self.pars["fix_len"])
             pass # FIXME
 
         self.standby() 
@@ -437,51 +442,41 @@ class LORA:
         
     def beginPacket(self, implicitHeaderMode=False):
         self.standby()
-        if self.mode == 0: # LoRa mode
-            self.implicitHeaderMode(implicitHeaderMode)
- 
-            # reset FIFO address and paload length 
-            self.writeRegister(REG_FIFO_ADDR_PTR, FIFO_TX_BASE_ADDR)
-            self.writeRegister(REG_PAYLOAD_LENGTH, 0)
-        else: # FSK/OOK mode
-            pass
+        self.implicitHeaderMode(implicitHeaderMode)
+
+        # reset FIFO address and paload length 
+        self.writeRegister(REG_FIFO_ADDR_PTR, FIFO_TX_BASE_ADDR)
+        self.writeRegister(REG_PAYLOAD_LENGTH, 0)
      
 
     def endPacket(self):
         # put in TX mode
         self.setMode(MODE_TX)
 
-        if self.mode == 0: # LoRa mode
-            # wait for TX done, standby automatically on TX_DONE
-            while (self.readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0:
-                pass 
-            
-            # clear IRQ's
-            self.writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK)
-        else: # FSK/OOK mode
-            pass
+        # wait for TX done, standby automatically on TX_DONE
+        while (self.readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0:
+            pass 
+        
+        # clear IRQ's
+        self.writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK)
         
         self.collect()
    
 
     def write(self, buffer):
-        if self._mode == 0: # LoRa mode
-            currentLength = self.readRegister(REG_PAYLOAD_LENGTH)
-            size = len(buffer)
+        currentLength = self.readRegister(REG_PAYLOAD_LENGTH)
+        size = len(buffer)
 
-            # check size
-            size = min(size, (MAX_PKT_LENGTH - FIFO_TX_BASE_ADDR - currentLength))
+        # check size
+        size = min(size, (MAX_PKT_LENGTH - FIFO_TX_BASE_ADDR - currentLength))
 
-            # write data
-            for i in range(size):
-                self.writeRegister(REG_FIFO, buffer[i])
-        
-            # update length        
-            self.writeRegister(REG_PAYLOAD_LENGTH, currentLength + size)
-            return size
-        
-        else: # FSK/OOK mode
-            pass
+        # write data
+        for i in range(size):
+            self.writeRegister(REG_FIFO, buffer[i])
+    
+        # update length        
+        self.writeRegister(REG_PAYLOAD_LENGTH, currentLength + size)
+        return size
 
         
     #def aquire_lock(self, lock=False):        
@@ -496,9 +491,30 @@ class LORA:
     def println(self, string, implicitHeader=False):
         #self.aquire_lock(True)  # wait until RX_Done, lock and begin writing.
         
-        self.beginPacket(implicitHeader) 
-        self.write(string.encode())
-        self.endPacket()  
+        if self.mode == 0: # LoRa mode
+            self.beginPacket(implicitHeader) 
+            self.write(string.encode())
+            self.endPacket()
+        else: # FSK/OOK mode
+            self.setMode(MODE_STDBY)
+            buf = string.encode()
+            size = len(buf)
+            if self.readRegister(REG_PACKET_CONFIG_1) & 0x80:
+                self.writeRegister(REG_FIFO, size) # variable length
+            else:
+                self.writeRegister(REG_PAYLOAD_LEN, size) # fixed length
+            for i in range(size):
+                self.writeRegister(REG_FIFO, buf[i])
+            #self.writeRegister(REG_FIFO_THRESH, size) #!!!
+            # REG_PACKET_CONFIG_1
+            # REG_PACKET_CONFIG_2
+            # REG_SEQ_CONFIG_1
+            # REG_SEQ_CONFIG_2
+            #self.setMode(MODE_FS_TX)
+            self.setMode(MODE_TX)
+            # !!! FIXME
+            self.collect()
+
 
         #self.aquire_lock(False) # unlock when done writing
 
@@ -673,6 +689,15 @@ class LORA:
             rx_config &= 0xF7 # bit 3 off
         self.writeRegister(REG_RX_CONFIG, rx_config)
 
+    def fix_len(self, fixed_len=False): # FSK/OOK mode only
+        reg = self.readRegister(REG_PACKET_CONFIG_1)
+        if fixed_len: reg &= 0x7F
+        else:         reg |= 0x80
+        self.writeRegister(REG_PACKET_CONFIG_1, reg)
+
+    def payload_len(self, length=0x40): # FSK/OOK mode only
+        self.writeRegister(REG_PAYLOAD_LEN, length)
+
 
     def onReceive(self, callback):
         self._onReceive = callback        
@@ -690,21 +715,23 @@ class LORA:
             
             # The last packet always starts at FIFO_RX_CURRENT_ADDR
             # no need to reset FIFO_ADDR_PTR
-            self.mode(MODE_RX_CONTINUOUS)
+            self.setMode(MODE_RX_CONTINUOUS)
         else: # FSK/OOK mode
             pass # FIXME
                  
                  
     def handleOnReceive(self, event_source):
         #self.aquire_lock(True)              # lock until TX_Done 
-        
-        # irqFlags = self.getIrqFlags() should be 0x50
-        if (self.getIrqFlags() & IRQ_PAYLOAD_CRC_ERROR_MASK) == 0:
-            if self._onReceive:
-                payload = self.read_payload()                
-                #self.aquire_lock(False)     # unlock when done reading  
-                
-                self._onReceive(self, payload)
+        if self.mode == 0: # LoRa mode 
+            # irqFlags = self.getIrqFlags() should be 0x50
+            if (self.getIrqFlags() & IRQ_PAYLOAD_CRC_ERROR_MASK) == 0:
+                if self._onReceive:
+                    payload = self.read_payload()                
+                    #self.aquire_lock(False)     # unlock when done reading  
+                    
+                    self._onReceive(self, payload)
+        else: # FSK/OOK mode
+            pass # FIXME
                 
         #self.aquire_lock(False)             # unlock in any case.
         
