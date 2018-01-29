@@ -439,31 +439,7 @@ class LORA:
 
         self.standby() 
 
-        
-    def beginPacket(self, implicitHeaderMode=False):
-        self.standby()
-        self.implicitHeaderMode(implicitHeaderMode)
-
-        # reset FIFO address and paload length 
-        self.writeRegister(REG_FIFO_ADDR_PTR, FIFO_TX_BASE_ADDR)
-        self.writeRegister(REG_PAYLOAD_LENGTH, 0)
-     
-
-    def endPacket(self):
-        # put in TX mode
-        self.setMode(MODE_TX)
-
-        # wait for TX done, standby automatically on TX_DONE
-        while (self.readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0:
-            pass 
-        
-        # clear IRQ's
-        self.writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK)
-        
-        self.collect()
-   
-
-    def write(self, buffer):
+    def write(self, buffer): # LoRa mode only
         currentLength = self.readRegister(REG_PAYLOAD_LENGTH)
         size = len(buffer)
 
@@ -488,34 +464,62 @@ class LORA:
     #            self._lock = False
             
             
-    def println(self, string, implicitHeader=False):
+    def println(self, string, implicitHeader=False): # LoRa/FSK/OOK
         #self.aquire_lock(True)  # wait until RX_Done, lock and begin writing.
         
         if self.mode == 0: # LoRa mode
-            self.beginPacket(implicitHeader) 
-            self.write(string.encode())
-            self.endPacket()
-        else: # FSK/OOK mode
+            # begin packet
             self.setMode(MODE_STDBY)
+            self.implicitHeaderMode(implicitHeaderMode)
+
+            # reset FIFO address and paload length 
+            self.writeRegister(REG_FIFO_ADDR_PTR, FIFO_TX_BASE_ADDR)
+            self.writeRegister(REG_PAYLOAD_LENGTH, 0)
+            self.write(string.encode())
+
+            # end packet
+            self.setMode(MODE_TX) # put in TX mode
+
+            # wait for TX done, standby automatically on TX_DONE
+            while (self.readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0:
+                pass 
+            
+            # clear IRQ's
+            self.writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK)
+            
+        else: # FSK/OOK mode (not implemented yet)
+            self.setMode(MODE_STDBY)
+
             buf = string.encode()
             size = len(buf)
+
             if self.readRegister(REG_PACKET_CONFIG_1) & 0x80:
                 self.writeRegister(REG_FIFO, size) # variable length
             else:
                 self.writeRegister(REG_PAYLOAD_LEN, size) # fixed length
+            
             for i in range(size):
                 self.writeRegister(REG_FIFO, buf[i])
+            
             #self.writeRegister(REG_FIFO_THRESH, size) #!!!
             # REG_PACKET_CONFIG_1
             # REG_PACKET_CONFIG_2
             # REG_SEQ_CONFIG_1
             # REG_SEQ_CONFIG_2
             #self.setMode(MODE_FS_TX)
+            
             self.setMode(MODE_TX)
-            # !!! FIXME
-            self.collect()
+            
+            # wait for TX done... FIXME
+            #while (self.readRegister(REG_...) & ...) == 0...:
+            #    pass
+            
+            # clear IRQ's FIXME
+            #...self.writeRegister()
+            
+            self.setMode(MODE_STDBY) # FIXME
 
-
+        self.collect()
         #self.aquire_lock(False) # unlock when done writing
 
     
