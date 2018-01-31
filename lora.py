@@ -128,7 +128,7 @@ REG_SYNC_WORD           = 0x39
 # Modes, REG_OP_MODE register (0x01 address)
 # bits 2-0
 MODE_SLEEP           = 0b000 # (0) Sleep
-MODE_STDBY           = 0b001 # (1) Standby
+MODE_STDBY           = 0b001 # (1) Standby (default)
 MODE_FS_TX           = 0b010 # (2) Frequency Synthesis TX (FSTx)
 MODE_TX              = 0b011 # (3) Transmit (Tx)
 MODE_FS_RX           = 0b100 # (4) Frequency Synthesis RX (FSRx)
