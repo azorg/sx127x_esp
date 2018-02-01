@@ -6,9 +6,10 @@ import time
 #import network
 #import socket
 #import framebuf
-from lora import LORA
+from sx127x import SX127x
 gc.collect()
 
+"""
 # setup Wi-Fi network
 import network
 sta_if = network.WLAN(network.STA_IF)
@@ -29,7 +30,7 @@ else:
     sta_if.connect('veonet', '********')
     sta_if.ifconfig(['192.168.0.13', '255.255.255.0', '192.168.0.254', '192.168.0.254'])
     #sta_if.ifconfig()
-
+"""
 
 def on_receive(lora, payload):
     lora.blink()
@@ -41,7 +42,7 @@ def on_receive(lora, payload):
     print("RSSI={}, SNR={}\n".format(rssi, snr))
 
 
-lora = LORA() # init LoRa subsystem
+lora = SX127x() # init SX127x subsystem
 lora.setFrequency(433000,000)  # kHz, Hz
 lora.setTxPower(13, True)      # power +13dBm (RFO pin if False or PA_BOOST pin if True)
 #lora.setHighPower(False)      # add +3 dB (up to +20 dBm power on PA_BOOST pin)

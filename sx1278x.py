@@ -201,7 +201,7 @@ def get_rx_bw(bw=10.4):
             return m, e 
     return RX_BW_TABLE[-1][:2]
 
-class LORA:
+class SX127x:
     def __init__(self,
                  mode = 0, # 0 - LoRa, 1 - FSK, 2 - OOK
                  pars = {'freq_kHz':         433000, # kHz
@@ -406,7 +406,7 @@ class LORA:
 
         # set LNA boost
         self.writeRegister(REG_LNA, self.readRegister(REG_LNA) | 0x03)
-
+        
         if self.mode == 0:
             # set LoRaTM options
             self.setSignalBandwidth(self.pars['signal_bandwidth'])
@@ -427,6 +427,9 @@ class LORA:
             # set base addresses
             self.writeRegister(REG_FIFO_TX_BASE_ADDR, FIFO_TX_BASE_ADDR)
             self.writeRegister(REG_FIFO_RX_BASE_ADDR, FIFO_RX_BASE_ADDR)
+
+            # set DIO0 mapping (RxDone)
+            self.writeRegister(REG_DIO_MAPPING_1, 0x00)
         else:
             # set FSK/OOK options
             self.bitrate(   self.pars["bitrate"])
@@ -435,7 +438,16 @@ class LORA:
             self.afc_bw(    self.pars["afc_bw"])
             self.enable_afc(self.pars["enable_afc"])
             self.fix_len(   self.pars["fix_len"])
-            pass # FIXME
+            
+            # REG_PACKET_CONFIG_1
+            # REG_PACKET_CONFIG_2
+            
+            # set DIO0 mapping:
+            #    in RxContin - SyncAddres
+            #    in TxContin - TxReady
+            #    in RxPacket - PayloadReady
+            #    in TxPacket - PacketSent
+            self.writeRegister(REG_DIO_MAPPING_1, 0x00)
 
         self.standby() 
 
@@ -494,18 +506,23 @@ class LORA:
             size = len(buf)
 
             if self.readRegister(REG_PACKET_CONFIG_1) & 0x80:
-                self.writeRegister(REG_FIFO, size) # variable length
+                self.writeRegister(REG_FIFO, size & ) # variable length
             else:
                 self.writeRegister(REG_PAYLOAD_LEN, size) # fixed length
             
+            # set Packet mode, PayloadLength(10:8)
+            self.writeRegister(REG_PACKET_CONFIG_2, 0x40 | ((size >> 8) & 0x7))
+            
             for i in range(size):
                 self.writeRegister(REG_FIFO, buf[i])
+            
             
             #self.writeRegister(REG_FIFO_THRESH, size) #!!!
             # REG_PACKET_CONFIG_1
             # REG_PACKET_CONFIG_2
             # REG_SEQ_CONFIG_1
             # REG_SEQ_CONFIG_2
+
             #self.setMode(MODE_FS_TX)
             
             self.setMode(MODE_TX)
@@ -529,7 +546,11 @@ class LORA:
             self.writeRegister(REG_IRQ_FLAGS, irqFlags)
             return irqFlags
         else: # FSK/OOK mode
-            pass # FIXME
+            irqFlags1 = self.readRegister(REG_IRQ_FLAGS_1)
+            self.writeRegister(REG_IRQ_FLAGS_1, irqFlags1)
+            irqFlags2 = self.readRegister(REG_IRQ_FLAGS_2)
+            self.writeRegister(REG_IRQ_FLAGS_2, irqFlags2)
+            return (irqFlags2 << 8) | irqFlags1
 
         
     def rssi(self): # dB
@@ -706,7 +727,6 @@ class LORA:
     def onReceive(self, callback):
         self._onReceive = callback        
         if callback:
-            self.writeRegister(REG_DIO_MAPPING_1, 0x00)
             self.pin_dio0.irq(trigger=Pin.IRQ_RISING, handler=self.handleOnReceive) 
         else:
             self.pin_dio0.irq(trigger=0, handler=None)
