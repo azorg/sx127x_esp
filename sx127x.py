@@ -691,7 +691,7 @@ class SX127x:
         reg = self.readRegister(REG_IMAGE_CAL)
         reg |= 0x40 # ImageCalStart bit
         self.writeRegister(REG_IMAGE_CAL, reg)
-        while (self.readRegister(REG_IMAGE_CAL) & 0x20) # ImageCalRunning
+        while (self.readRegister(REG_IMAGE_CAL) & 0x20): # ImageCalRunning
             pass
 
 
@@ -744,7 +744,7 @@ class SX127x:
             # clear IRQ's
             self.writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK)
             
-        else: # FSK/OOK mode (not implemented yet)
+        else: # FSK/OOK mode (not tested yet)
             self.setMode(MODE_STDBY)
 
             buf = string.encode()
@@ -758,28 +758,28 @@ class SX127x:
             # set Packet mode, PayloadLength(10:8)
             self.writeRegister(REG_PACKET_CONFIG_2, 0x40 | ((size >> 8) & 0x7))
             
+            self.writeRegister(REG_FIFO_THRESH, 24) #!!! FIXME !!!
+            
+            # start TX mode
+            self.setMode(MODE_TX)
+            
+            # wait `TxRaedy` (bit 5 in `RegIrqFlags1`)
+            while ((self.readRegister(REG_IRQ_FLAGS_1) & 0x20) == 0):
+                pass
+
+            # write data to FIFO
             for i in range(size):
                 self.writeRegister(REG_FIFO, buf[i])
             
-            
-            #self.writeRegister(REG_FIFO_THRESH, size) #!!!
-            # REG_PACKET_CONFIG_1
-            # REG_PACKET_CONFIG_2
-            # REG_SEQ_CONFIG_1
-            # REG_SEQ_CONFIG_2
+            # check FIFO bellow thresold (bit 5 in `RegIrqFlags2`)
+            #if ((self.readRegister(REG_IRQ_FLAGS_2) & 0x20)): pass
 
-            #self.setMode(MODE_FS_TX)
+            # wait `PacketSent` (bit 3 in `RegIrqFlags2`)
+            while ((self.readRegister(REG_IRQ_FLAGS_2) & 0x8) == 0):
+                pass
             
-            self.setMode(MODE_TX)
-            
-            # wait for TX done... FIXME
-            #while (self.readRegister(REG_...) & ...) == 0...:
-            #    pass
-            
-            # clear IRQ's FIXME
-            #...self.writeRegister()
-            
-            self.setMode(MODE_STDBY) # FIXME
+            # switch to standby mode
+            self.setMode(MODE_STDBY)
 
         self.collect()
         #self.aquire_lock(False) # unlock when done writing
