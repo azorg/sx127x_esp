@@ -158,9 +158,21 @@ IRQ_TX_DONE           = 0x08 # `TxDone`
 IRQ_PAYLOAD_CRC_ERROR = 0x20 # `PayloadCrcError`
 
 # REG_IRQn_FLAGS (`RegIrqFlagsN` in datasheet) bits (FSK/OOK)
-IRQ1_RX_READY    = 0x50 # bit 6: `RxReady` in `RegIrqFlags1`
-IRQ1_TX_READY    = 0x20 # bit 5: `TxReady` in `RegIrqFlags1`
-IRQ2_PACKET_SENT = 0x08 # bit 3: `PacketSent` in `RegIrqFlags2`
+IRQ1_RX_READY    = 0x50 # bit 6: `RxReady`
+IRQ1_TX_READY    = 0x20 # bit 5: `TxReady`
+
+IRQ2_FIFO_FULL     = 0x80 # bit 7: `FifoFull`
+IRQ2_FIFO_EMPTY    = 0x40 # bit 6: `FifoEmpty`
+IRQ2_FIFO_LEVEL    = 0x20 # bit 5: `FifoLevel`
+IRQ2_FIFO_OVERRUN  = 0x10 # bit 4: `FifoOverrun`
+IRQ2_PACKET_SENT   = 0x08 # bit 3: `PacketSent`
+IRQ2_PAYLOAD_READY = 0x04 # bit 2: `PayloadReady`
+IRQ2_CRC_OK        = 0x02 # bit 1: `CrcOk`
+IRQ2_LOW_BAT       = 0x01 # bit 1: `LowBat`
+
+# REG_FIFO_THRESH (`RegFifoThresh` in datasheet) bits
+TX_START_FIFO_LEVEL   = 0x00 # bit 7: 0 -> `FifoLevel` (use `FifoThreshhold`)
+TX_START_FIFO_NOEMPTY = 0x80 # bit 7: 1 -> `FifoEmpty` (start if FIFO no empty)
 
 # REG_IRQ_FLAGS_MASK (`RegIrqFlagsMask` in datasheet) bits (LoRa)
 IRQ_RX_DONE_MASK = 0x40 # bit 6: `RxDoneMask`
@@ -174,6 +186,11 @@ FIFO_RX_BASE_ADDR = 0x00
 # Constants
 FXOSC = 32e6 # 32 MHz
 FSTEP = FXOSC / 2**19 # ~61.03515625 Hz
+
+# RADIO class mode
+LORA = 0
+FSK  = 1
+OOK  = 2
 
 # RX BandWith table
 RX_BW_TABLE = (
@@ -208,9 +225,9 @@ def get_rx_bw(bw=10.4):
     return RX_BW_TABLE[-1][:2]
 
 
-class SX127x:
+class RADIO:
     def __init__(self,
-                 mode = 0, # 0 - LoRa, 1 - FSK, 2 - OOK
+                 mode = LORA, # 0 - LoRa, 1 - FSK, 2 - OOK
                  pars = {'freq_kHz':         433000, # kHz
                          'freq_Hz':          0,      # Hz
                          'power':            10,     # dBm
@@ -438,7 +455,7 @@ class SX127x:
             self.writeReg(REG_DIO_MAPPING_1, 0x00)
         else:
             # set FSK/OOK options
-            self.packet_mode(True)
+            self.packetMode(True) # FIXME
             self.bitrate(  self.pars["bitrate"])
             self.fdev(     self.pars["fdev"])
             self.rxBW(     self.pars["rx_bw"])
@@ -455,6 +472,12 @@ class SX127x:
             self.writeReg(REG_SYNC_VALUE_3, 0x7E) # 0x01 by default
             self.writeReg(REG_SYNC_VALUE_4, 0x96) # 0x01 by default
 
+            # set `DataMode` to Packet (and reset PayloadLength(10:8) to 0)
+            self.writeReg(REG_PACKET_CONFIG_2, 0x40)
+            
+            # set TX start FIFO condition
+            self.writeReg(REG_FIFO_THRESH, TX_START_FIFO_NOEMPTY)
+            
             # set DIO0 mapping:
             #    in RxContin - SyncAddres
             #    in TxContin - TxReady
@@ -512,7 +535,8 @@ class SX127x:
             self.writeReg(REG_MODEM_CONFIG_2, reg)
         else: # FSK/OOK mode
             reg = self.readReg(REG_PACKET_CONFIG_1)
-            reg = (reg | 0x08) if crc else (reg & 0xF7) # `CrcOn`
+            reg = (reg | 0x10) if crc else (reg & 0xEF) # `CrcOn`
+            # FIXME 0x80 - `CrcAutoClearOff` - ???
             self.writeReg(REG_PACKET_CONFIG_1, reg)
  
     
@@ -753,31 +777,37 @@ class SX127x:
             
             # clear IRQ's
             self.writeReg(REG_IRQ_FLAGS, IRQ_TX_DONE)
-            
+           
         else: # FSK/OOK mode
+            size = min(size, 127) # limit size FIXME
+
+            # set TX start FIFO condition
+            #self.writeReg(REG_FIFO_THRESH, TX_START_FIFO_NOEMPTY)
+            
+            # wait while FIFO is no empty
+            while ((self.readReg(REG_IRQ_FLAGS_2) & IRQ2_FIFO_EMPTY) == 0):
+                pass # FIXME: check timeout
+
             if self.readReg(REG_PACKET_CONFIG_1) & 0x80: # `PacketFormat`
                 self.writeReg(REG_FIFO, size) # variable length
+                add = 1
             else:
                 self.writeReg(REG_PAYLOAD_LEN, size) # fixed length
+                add = 0
             
-            # set `DataMode` to Packet and PayloadLength(10:8)
-            self.writeReg(REG_PACKET_CONFIG_2, 0x40 | ((size >> 8) & 0x7))
+            # set TX start FIFO condition
+            #self.writeReg(REG_FIFO_THRESH, TX_START_FIFO_LEVEL | (size + add))
             
-            self.writeReg(REG_FIFO_THRESH, 24) #!!! FIXME !!!
+            # write data to FIFO
+            for i in range(size):
+                self.writeReg(REG_FIFO, buf[i])
             
             # start TX mode
             self.setMode(MODE_TX)
             
             # wait `TxRaedy` (bit 5 in `RegIrqFlags1`)
-            while ((self.readReg(REG_IRQ_FLAGS_1) & IRQ1_TX_READY) == 0):
-                pass # FIXME: check timeout
-
-            # write data to FIFO
-            for i in range(size):
-                self.writeReg(REG_FIFO, buf[i])
-            
-            # check FIFO bellow thresold (bit 5 in `RegIrqFlags2`)
-            #if ((self.readReg(REG_IRQ_FLAGS_2) & 0x20)): pass
+            #while ((self.readReg(REG_IRQ_FLAGS_1) & IRQ1_TX_READY) == 0):
+            #    pass # FIXME: check timeout
 
             # wait `PacketSent` (bit 3 in `RegIrqFlags2`)
             while ((self.readReg(REG_IRQ_FLAGS_2) & IRQ2_PACKET_SENT) == 0):

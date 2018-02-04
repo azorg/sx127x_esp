@@ -6,15 +6,17 @@ import time
 #import network
 #import socket
 #import framebuf
-from sx127x import SX127x
+import sx127x
 gc.collect()
 
-"""
 # setup Wi-Fi network
 import network
 sta_if = network.WLAN(network.STA_IF)
 sta_ap = network.WLAN(network.AP_IF)
+sta_if.active(False)
+sta_ap.active(False)
 
+"""
 if True:
     # create AP
     sta_if.active(False)
@@ -42,16 +44,11 @@ def on_receive(tr, payload):
     print("RSSI={}, SNR={}\n".format(rssi, snr))
 
 
-tr = SX127x() # init SX127x RF module
+tr = sx127x.RADIO(mode=sx127x.FSK) # init SX127x RF module
 tr.setFrequency(433000,000) # kHz, Hz
-tr.setPower(13, True)       # power +13dBm (RFO pin if False or PA_BOOST pin if True)
+tr.setPower(10, True)       # power +10dBm (RFO pin if False or PA_BOOST pin if True)
 #tr.setHighPower(False)     # add +3 dB (up to +20 dBm power on PA_BOOST pin)
-
-tr.lora(True) # LoRaTM mode
-#tr.fsk(True) # FSK mode
-#tr.ook(True) # OOK mode
-
-tr.enableCRC(False) # CRC off
+tr.enableCRC(False)         # CRC off
 
 if tr.isLora(): # LoRa mode
     tr.setBW(125e3)   # BW [7.8e3...500e3] Hz
@@ -66,7 +63,7 @@ else: # FSK/OOK mode
     tr.fdev(5000.)    # frequency deviation [Hz] 
     tr.rxBW(10.4)     # 2,6...250 kHz
     tr.afcBW(50.0)    # 2,6...250 kHz
-    tr.fixedLen(True)
+    tr.fixedLen(False)
     tr.enableAFC(True)
 
 tr.collect()
