@@ -16,6 +16,6 @@
  + begin work under FSK/OOK modes
 
 2018.02.04
- + first test TX in FSK packet mode
+ + first test TX in FSK/OOK packet mode (controll by RTL-SDR)
 
 

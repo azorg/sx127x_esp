@@ -246,7 +246,8 @@ class RADIO:
                          'rx_bw':            10.4,   # 2,6...250 kHz
                          'afc_bw':           50.0,   # 2,6...250 kHz
                          'afc':              True,
-                         'fixed':            False},
+                         'fixed':            False,
+                         'dcfree':           0},     # 0, 1 or 2
                  gpio = {'led':    2,   # blue led
                          'led_on': 0,   # led on level (0 or 1)
                          'reset':  0,   # reset pin
@@ -429,6 +430,9 @@ class RADIO:
 
         # set LNA boost
         self.writeReg(REG_LNA, self.readReg(REG_LNA) | 0x03)
+            
+        # enable/disable CRC
+        self.enableCRC(self.pars["crc"])
         
         if self.mode == 0:
             # set LoRaTM options
@@ -445,7 +449,6 @@ class RADIO:
             self.setCR(self.pars['cr'])
             self.setPreamble(self.pars['preamble'])
             self.setSW(self.pars['sw'])
-            self.enableCRC(self.pars['crc'])
             
             # set base addresses
             self.writeReg(REG_FIFO_TX_BASE_ADDR, FIFO_TX_BASE_ADDR)
@@ -462,7 +465,7 @@ class RADIO:
             self.afcBW(    self.pars["afc_bw"])
             self.fixedLen( self.pars["fixed"])
             self.enableAFC(self.pars["afc"])
-            self.enableCRC(self.pars["crc"])
+            self.dcFree(   self.pars["dcfree"])
             
             self.writeReg(REG_RSSI_TRESH, 0xFF) # default
             self.writeReg(REG_PREAMBLE_LSB, 8) # 3 by default
@@ -709,6 +712,14 @@ class RADIO:
             self.writeReg(REG_PACKET_CONFIG_1, reg)
 
 
+    def dcFree(self, mode=0):
+        """set DcFree mode: 0=Off, 1=Manchester, 2=Whitening (FSK/OOK)"""
+        if self.mode:
+            reg = self.readReg(REG_PACKET_CONFIG_1)
+            reg = (reg & 0x9F) | ((mode & 3) << 5) # bit 6-5 `DcFree`
+            self.writeReg(REG_PACKET_CONFIG_1, reg)
+
+
     def payloadLen(self, length=0x40):
         """set Payload length (FSK/OOK)"""
         if self.mode:
@@ -722,8 +733,7 @@ class RADIO:
             if packet: reg |=  0x40 # bit 6 -> 1 - Packet mode
             else:      reg &= ~0x40 # bit 6 -> 0 - Continuous mode
             self.writeReg(REG_PACKET_CONFIG_2, reg)
-
-
+    
     def rxCalibrate(self):
         """RSSI and IQ callibration (FSK/OOK)"""
         if self.mode:

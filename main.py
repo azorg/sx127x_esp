@@ -44,7 +44,11 @@ def on_receive(tr, payload):
     print("RSSI={}, SNR={}\n".format(rssi, snr))
 
 
-tr = sx127x.RADIO(mode=sx127x.FSK) # init SX127x RF module
+# init SX127x RF module
+tr = sx127x.RADIO(mode=sx127x.LORA)
+#tr = sx127x.RADIO(mode=sx127x.FSK)
+#tr = sx127x.RADIO(mode=sx127x.OOK)
+
 tr.setFrequency(433000,000) # kHz, Hz
 tr.setPower(10, True)       # power +10dBm (RFO pin if False or PA_BOOST pin if True)
 #tr.setHighPower(False)     # add +3 dB (up to +20 dBm power on PA_BOOST pin)
@@ -65,10 +69,11 @@ else: # FSK/OOK mode
     tr.afcBW(50.0)    # 2,6...250 kHz
     tr.fixedLen(False)
     tr.enableAFC(True)
+    tr.dcFree(1)      # 0=Off, 1=Manchester, 2=Whitening
 
 tr.collect()
 
-if 0:
+if 1:
     # reseiver
     tr.onReceive(on_receive) # set the receive callback
     tr.receive() # go into receive mode
@@ -77,7 +82,7 @@ else:
     # transmitter
     while True:
         tr.blink()
-        tr.send("Hello!")
+        tr.send("Hello! " * 10)
         time.sleep_ms(1000)
 
 
