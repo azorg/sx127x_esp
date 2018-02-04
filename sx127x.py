@@ -488,6 +488,9 @@ class RADIO:
             #    in TxPacket - PacketSent
             self.writeReg(REG_DIO_MAPPING_1, 0x00)
 
+            # RSSI and IQ callibrate
+            self.rxCalibrate()
+
         self.standby() 
 
         
@@ -543,13 +546,18 @@ class RADIO:
             self.writeReg(REG_PACKET_CONFIG_1, reg)
  
     
+    def getRxGain(self):
+        """get current RX gain [1..6] from `RegLna` (1 - maximum gain)"""
+        return (self.readReg(REG_LNA) >> 5) & 0x07;
+
+
     def rssi(self):
         """get RSSI [dB] (LoRa)"""
         if self.mode == 0: # LoRa mode
             return self.readReg(REG_PKT_RSSI_VALUE) - \
                    (164 if self.freq < 868000000 else 157)
         else: # FSK/OOK mode
-            return self.readReg(REG_RSSI_VALUE) * 0.5
+            return -0.5 * self.readReg(REG_RSSI_VALUE)
 
 
     def snr(self):
@@ -720,12 +728,6 @@ class RADIO:
             self.writeReg(REG_PACKET_CONFIG_1, reg)
 
 
-    def payloadLen(self, length=0x40):
-        """set Payload length (FSK/OOK)"""
-        if self.mode:
-            self.writeReg(REG_PAYLOAD_LEN, length)
-
-
     def packetMode(self, packet=True):
         """set Packet or Continuous mode (FSK/OOK)"""
         if self.mode:
@@ -800,10 +802,10 @@ class RADIO:
 
             if self.readReg(REG_PACKET_CONFIG_1) & 0x80: # `PacketFormat`
                 self.writeReg(REG_FIFO, size) # variable length
-                add = 1
+                #add = 1
             else:
                 self.writeReg(REG_PAYLOAD_LEN, size) # fixed length
-                add = 0
+                #add = 0
             
             # set TX start FIFO condition
             #self.writeReg(REG_FIFO_THRESH, TX_START_FIFO_LEVEL | (size + add))
@@ -839,17 +841,16 @@ class RADIO:
             self.pin_dio0.irq(trigger=0, handler=None)
         
 
-    def receive(self, size = 0):
+    def receive(self, size=0):
         """go to RX mode; wait callback by interrupt (LoRa/FSK/OOK)"""
         if self.mode == 0: # LoRa mode
-            self.implicitHeaderMode(size > 0)
-            if size > 0: self.writeReg(REG_PAYLOAD_LENGTH, size & 0xFF)  
-            
-            # The last packet always starts at FIFO_RX_CURRENT_ADDR
-            # no need to reset FIFO_ADDR_PTR
-            self.setMode(MODE_RX_CONTINUOUS)
+            if size > 0:
+                self.implicitHeaderMode(True)
+                self.writeReg(REG_PAYLOAD_LENGTH, size & 0xFF)  
         else: # FSK/OOK mode
-            pass # FIXME
+            if (self.readReg(REG_PACKET_CONFIG_1) & 0x80) == 0: # check `PacketFormat`
+                self.writeReg(REG_PAYLOAD_LEN, max(1, size)) # fixed length
+        self.setMode(MODE_RX_CONTINUOUS)
                  
                  
     def collect(self):
@@ -862,6 +863,8 @@ class RADIO:
     def _handleOnReceive(self, event_source):
         #self.aquire_lock(True)
         if self.mode == 0: # LoRa mode 
+            #print("DIO0 interrupt in LoRa mode") # FIXME
+            
             irqFlags = self.readReg(REG_IRQ_FLAGS) # should be 0x50 ???
             self.writeReg(REG_IRQ_FLAGS, irqFlags)
             if (irqFlags & IRQ_PAYLOAD_CRC_ERROR):
@@ -871,23 +874,29 @@ class RADIO:
             self.writeReg(REG_FIFO_ADDR_PTR, self.readReg(REG_FIFO_RX_CURRENT_ADDR))
             
             # read packet length
-            packetLength = self.readReg(REG_PAYLOAD_LENGTH) if self._implicitHeaderMode else \
-                           self.readReg(REG_RX_NB_BYTES)
+            packetLen = self.readReg(REG_PAYLOAD_LENGTH) if self._implicitHeaderMode else \
+                        self.readReg(REG_RX_NB_BYTES)
                            
-            # read FIFO
-            payload = bytearray()
-            for i in range(packetLength):
-                payload.append(self.readReg(REG_FIFO))
-            payload = bytes(payload)
-            self.collect()
-
-            # run callback
-            if self._onReceive:
-                self._onReceive(self, payload)
-            self.collect()
-
         else: # FSK/OOK mode
-            pass # FIXME
+            #print("DIO0 interrupt in FSK/OOK mode") # FIXME
+            
+            # read packet length
+            if self.readReg(REG_PACKET_CONFIG_1) & 0x80: # `PacketFormat`
+                packetLen = self.readReg(REG_FIFO) # variable length
+            else:
+                packetLen = self.readReg(REG_PAYLOAD_LEN) # fixed length
+
+        # read FIFO
+        payload = bytearray(packetLen)
+        for i in range(packetLen):
+            payload[i] = self.readReg(REG_FIFO)
+        payload = bytes(payload)
+        self.collect()
+
+        # run callback
+        if self._onReceive:
+            self._onReceive(self, payload)
+        self.collect()
 
         #self.aquire_lock(False)
         

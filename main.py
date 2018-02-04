@@ -51,7 +51,7 @@ tr = sx127x.RADIO(mode=sx127x.LORA)
 
 tr.setFrequency(433000,000) # kHz, Hz
 tr.setPower(10, True)       # power +10dBm (RFO pin if False or PA_BOOST pin if True)
-#tr.setHighPower(False)     # add +3 dB (up to +20 dBm power on PA_BOOST pin)
+#tr.setHighPower(True)      # add +3 dB (up to +20 dBm power on PA_BOOST pin)
 tr.enableCRC(False)         # CRC off
 
 if tr.isLora(): # LoRa mode
@@ -63,26 +63,27 @@ if tr.isLora(): # LoRa mode
     tr.setSW(0x12)    # allways 0x12
 
 else: # FSK/OOK mode
-    tr.bitrate(4800)  # bit/s
-    tr.fdev(5000.)    # frequency deviation [Hz] 
-    tr.rxBW(10.4)     # 2,6...250 kHz
-    tr.afcBW(50.0)    # 2,6...250 kHz
+    tr.bitrate(1200)    # bit/s
+    tr.fdev(6000.)      # frequency deviation [Hz] 
+    tr.rxBW(10.4)       # 2,6...250 kHz
+    tr.afcBW(50.0)      # 2,6...250 kHz
     tr.fixedLen(False)
-    tr.enableAFC(True)
-    tr.dcFree(1)      # 0=Off, 1=Manchester, 2=Whitening
+    tr.enableAFC(False) # FIXME
+    tr.dcFree(0)        # 0=Off, 1=Manchester, 2=Whitening
 
 tr.collect()
 
-if 1:
+if 1: # LOOK HERE!!
     # reseiver
     tr.onReceive(on_receive) # set the receive callback
     tr.receive() # go into receive mode
+    time.sleep(-1)
 
 else:
     # transmitter
     while True:
         tr.blink()
-        tr.send("Hello! " * 10)
-        time.sleep_ms(1000)
+        tr.send("Hello!")
+        time.sleep_ms(3000)
 
 
