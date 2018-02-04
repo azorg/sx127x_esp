@@ -32,39 +32,55 @@ else:
     #sta_if.ifconfig()
 """
 
-def on_receive(lora, payload):
-    lora.blink()
+def on_receive(tr, payload):
+    tr.blink()
             
     payload_string = payload.decode()
-    rssi = lora.rssi()
-    snr  = lora.snr()
+    rssi = tr.rssi()
+    snr  = tr.snr()
     print("*** Received message ***\n{}".format(payload_string))
     print("RSSI={}, SNR={}\n".format(rssi, snr))
 
 
-lora = SX127x() # init SX127x subsystem
-lora.setFrequency(433000,000)  # kHz, Hz
-lora.setTxPower(13, True)      # power +13dBm (RFO pin if False or PA_BOOST pin if True)
-#lora.setHighPower(False)      # add +3 dB (up to +20 dBm power on PA_BOOST pin)
-lora.setSignalBandwidth(125e3) # BW [7.8e3...500e3] Hz
-lora.setSpreadingFactor(10)    # SF 6...12
-lora.setLDR(False)             # Low Datarate Optimize
-lora.setCodingRate(5)          # 5..8
-lora.setPreambleLength(8)      # 6..65000 (8 by default)
-lora.setSyncWord(0x12)         # allways 0x12
-lora.enableCRC(False)          # CRC off
-lora.collect()
+tr = SX127x() # init SX127x RF module
+tr.setFrequency(433000,000) # kHz, Hz
+tr.setPower(13, True)       # power +13dBm (RFO pin if False or PA_BOOST pin if True)
+#tr.setHighPower(False)     # add +3 dB (up to +20 dBm power on PA_BOOST pin)
+
+tr.lora(True) # LoRaTM mode
+#tr.fsk(True) # FSK mode
+#tr.ook(True) # OOK mode
+
+tr.enableCRC(False) # CRC off
+
+if tr.isLora(): # LoRa mode
+    tr.setBW(125e3)   # BW [7.8e3...500e3] Hz
+    tr.setSF(10)      # SF 6...12
+    tr.setLDR(False)  # Low Datarate Optimize
+    tr.setCR(5)       # 5..8
+    tr.setPreamble(8) # 6..65000 (8 by default)
+    tr.setSW(0x12)    # allways 0x12
+
+else: # FSK/OOK mode
+    tr.bitrate(4800)  # bit/s
+    tr.fdev(5000.)    # frequency deviation [Hz] 
+    tr.rxBW(10.4)     # 2,6...250 kHz
+    tr.afcBW(50.0)    # 2,6...250 kHz
+    tr.fixedLen(True)
+    tr.enableAFC(True)
+
+tr.collect()
 
 if 0:
     # reseiver
-    lora.onReceive(on_receive) # register the receive callback
-    lora.receive() # go into receive mode
+    tr.onReceive(on_receive) # set the receive callback
+    tr.receive() # go into receive mode
 
 else:
     # transmitter
     while True:
-        lora.blink()
-        lora.println("Hello!")
+        tr.blink()
+        tr.send("Hello!")
         time.sleep_ms(1000)
 
 
