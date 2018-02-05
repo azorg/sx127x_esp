@@ -251,8 +251,8 @@ class RADIO:
                          'dcfree':           0},     # 0, 1 or 2
                  gpio = {'led':    2,   # blue led
                          'led_on': 0,   # led on level (0 or 1)
-                         'reset':  0,   # reset pin
-                         'dio0':   4,   # DIO0 line
+                         'reset':  5,   # reset pin from GPIO5
+                         'dio0':   4,   # DIO0 line to GPIO4
                          'cs':     15,  # SPI CS
                          'sck':    14,  # SPI SCK
                          'mosi':   13,  # SPI MOSI
