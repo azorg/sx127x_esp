@@ -155,6 +155,7 @@ PA_SELECT = 0x80 # bit 7: `PaSelect`
 
 # REG_IRQ_FLAGS (`RegIrqFlags` in datasheet) bits (LoRa)
 IRQ_TX_DONE           = 0x08 # `TxDone`
+IRQ_RX_DONE           = 0x40 # `RxDone`
 IRQ_PAYLOAD_CRC_ERROR = 0x20 # `PayloadCrcError`
 
 # REG_IRQn_FLAGS (`RegIrqFlagsN` in datasheet) bits (FSK/OOK)
@@ -241,11 +242,11 @@ class RADIO:
                          'preamble':         8,      # 6...65k
                          'implicit_header':  False,
                          # FSK/OOK mode:
-                         'bitrate':          4800.,  # bit/s
-                         'fdev':             5000.,  # frequency deviation [Hz]
+                         'bitrate':          1200.,  # bit/s
+                         'fdev':             6000.,  # frequency deviation [Hz]
                          'rx_bw':            10.4,   # 2,6...250 kHz
-                         'afc_bw':           50.0,   # 2,6...250 kHz
-                         'afc':              True,
+                         'afc_bw':            2.6,   # 2,6...250 kHz
+                         'afc':              False,
                          'fixed':            False,
                          'dcfree':           0},     # 0, 1 or 2
                  gpio = {'led':    2,   # blue led
@@ -454,7 +455,7 @@ class RADIO:
             self.writeReg(REG_FIFO_TX_BASE_ADDR, FIFO_TX_BASE_ADDR)
             self.writeReg(REG_FIFO_RX_BASE_ADDR, FIFO_RX_BASE_ADDR)
 
-            # set DIO0 mapping (RxDone)
+            # set DIO0 mapping (`RxDone`)
             self.writeReg(REG_DIO_MAPPING_1, 0x00)
         else:
             # set FSK/OOK options
@@ -482,10 +483,10 @@ class RADIO:
             self.writeReg(REG_FIFO_THRESH, TX_START_FIFO_NOEMPTY)
             
             # set DIO0 mapping:
-            #    in RxContin - SyncAddres
-            #    in TxContin - TxReady
-            #    in RxPacket - PayloadReady
-            #    in TxPacket - PacketSent
+            #    in RxContin - `SyncAddres`
+            #    in TxContin - `TxReady`
+            #    in RxPacket - `PayloadReady` <- used signal
+            #    in TxPacket - `PacketSent`
             self.writeReg(REG_DIO_MAPPING_1, 0x00)
 
             # RSSI and IQ callibrate
@@ -568,7 +569,7 @@ class RADIO:
             return self.readReg(REG_RSSI_VALUE) * 0.5 # FIXME
         
 
-    def getIrqFlags(self):
+    def irqFlags(self):
         """get IRQ flags for debug"""
         if self.mode == 0: # LoRa mode
             irqFlags = self.readReg(REG_IRQ_FLAGS)
@@ -576,9 +577,7 @@ class RADIO:
             return irqFlags
         else: # FSK/OOK mode
             irqFlags1 = self.readReg(REG_IRQ_FLAGS_1)
-            #self.writeReg(REG_IRQ_FLAGS_1, irqFlags1)
             irqFlags2 = self.readReg(REG_IRQ_FLAGS_2)
-            #self.writeReg(REG_IRQ_FLAGS_2, irqFlags2)
             return (irqFlags2 << 8) | irqFlags1
 
     
@@ -694,7 +693,7 @@ class RADIO:
                 self.writeReg(REG_RX_BW, (m << 3) | e)
 
 
-    def afcBW(self, bw=50.0):
+    def afcBW(self, bw=2.6):
         """set AFC BW [kHz] (FSK/OOK)"""
         if self.mode:
             if bw:
@@ -732,17 +731,17 @@ class RADIO:
         """set Packet or Continuous mode (FSK/OOK)"""
         if self.mode:
             reg = self.readReg(REG_PACKET_CONFIG_2)
-            if packet: reg |=  0x40 # bit 6 -> 1 - Packet mode
-            else:      reg &= ~0x40 # bit 6 -> 0 - Continuous mode
+            if packet: reg |=  0x40 # bit 6: `DataMode` 1 -> Packet mode
+            else:      reg &= ~0x40 # bit 6: `DataMode` 0 -> Continuous mode
             self.writeReg(REG_PACKET_CONFIG_2, reg)
     
     def rxCalibrate(self):
         """RSSI and IQ callibration (FSK/OOK)"""
         if self.mode:
             reg = self.readReg(REG_IMAGE_CAL)
-            reg |= 0x40 # ImageCalStart bit
+            reg |= 0x40 # `ImageCalStart` bit
             self.writeReg(REG_IMAGE_CAL, reg)
-            while (self.readReg(REG_IMAGE_CAL) & 0x20): # ImageCalRunning
+            while (self.readReg(REG_IMAGE_CAL) & 0x20): # `ImageCalRunning`
                 pass # FIXME: check timeout
 
 
@@ -791,7 +790,7 @@ class RADIO:
             self.writeReg(REG_IRQ_FLAGS, IRQ_TX_DONE)
            
         else: # FSK/OOK mode
-            size = min(size, 127) # limit size FIXME
+            size = min(size, 127) # limit size FIXME why 127 ?!
 
             # set TX start FIFO condition
             #self.writeReg(REG_FIFO_THRESH, TX_START_FIFO_NOEMPTY)
@@ -863,13 +862,18 @@ class RADIO:
     def _handleOnReceive(self, event_source):
         #self.aquire_lock(True)
         if self.mode == 0: # LoRa mode 
-            #print("DIO0 interrupt in LoRa mode") # FIXME
-            
-            irqFlags = self.readReg(REG_IRQ_FLAGS) # should be 0x50 ???
+            irqFlags = self.readReg(REG_IRQ_FLAGS) # should be 0x50
             self.writeReg(REG_IRQ_FLAGS, irqFlags)
-            if (irqFlags & IRQ_PAYLOAD_CRC_ERROR):
-                return # CRC error
 
+            if (irqFlags & IRQ_RX_DONE) == 0: # check `RxDone`
+                return # `RxDone` is not set
+
+            print("DIO0 interrupt in LoRa mode by `RxDone` (RegIrqFlags=0x%02X)" % irqFlags)
+
+            if irqFlags & IRQ_PAYLOAD_CRC_ERROR: # check `PayloadCrcError`
+                print("=> CRC error (PayLoadCrcError=1)")
+                return # CRC error
+            
             # set FIFO address to current RX address
             self.writeReg(REG_FIFO_ADDR_PTR, self.readReg(REG_FIFO_RX_CURRENT_ADDR))
             
@@ -878,7 +882,15 @@ class RADIO:
                         self.readReg(REG_RX_NB_BYTES)
                            
         else: # FSK/OOK mode
-            #print("DIO0 interrupt in FSK/OOK mode") # FIXME
+            irqFlags = self.readReg(REG_IRQ_FLAGS_2) # should be 0x?? FIXME
+            if (irqFlags & IRQ2_PAYLOAD_READY) == 0:
+                return # `PayloadReady` is not set
+            
+            print("DIO0 interrupt in FSK/OOK mode by `PayloadReady` (RegIrqFlags2=0x%02X)" % irqFlags)
+            
+            if (irqFlags & IRQ2_CRC_OK) == 0: # check `CrcOk`
+                print("=> CRC error (CrcOk=0)")
+                return # CRC error
             
             # read packet length
             if self.readReg(REG_PACKET_CONFIG_1) & 0x80: # `PacketFormat`

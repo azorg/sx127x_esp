@@ -66,24 +66,24 @@ else: # FSK/OOK mode
     tr.bitrate(1200)    # bit/s
     tr.fdev(6000.)      # frequency deviation [Hz] 
     tr.rxBW(10.4)       # 2,6...250 kHz
-    tr.afcBW(50.0)      # 2,6...250 kHz
+    tr.afcBW(2.6)       # 2,6...250 kHz
     tr.fixedLen(False)
     tr.enableAFC(False) # FIXME
     tr.dcFree(0)        # 0=Off, 1=Manchester, 2=Whitening
 
 tr.collect()
 
-if 1: # LOOK HERE!!
-    # reseiver
-    tr.onReceive(on_receive) # set the receive callback
-    tr.receive() # go into receive mode
-    time.sleep(-1)
-
-else:
+if 1: # <- LOOK HERE!!!
     # transmitter
     while True:
         tr.blink()
         tr.send("Hello!")
         time.sleep_ms(3000)
+
+else:
+    # reseiver
+    tr.onReceive(on_receive) # set the receive callback
+    tr.receive() # go into receive mode
+    time.sleep(-1) # wait interrupt
 
 
