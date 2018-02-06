@@ -304,7 +304,7 @@ class RADIO:
         self.onReceive(onReceive)        
         #self._lock = False
         self.reset()
-        self.mode = 0 # LoRa mode by default
+        self._mode = 0 # LoRa mode by default
         self.init(mode, pars)
 
 
@@ -419,9 +419,28 @@ class RADIO:
         self.setMode(MODE_STDBY)
 
 
+    def tx(self, on=True):
+        """on/off TX mode (off = standby)"""
+        if on: self.setMode(MODE_TX)
+        else:  self.setMode(MODE_STDBY)
+
+
+    def rx(self, on=True):
+        """on/off RX (continuous) mode (off=standby)"""
+        if on: self.setMode(MODE_RX_CONTINUOUS)
+        else:  self.setMode(MODE_STDBY)
+
+
+    def cad(self, on=True):
+        """on/off CAD (LoRa) mode (off=standby)"""
+        if self._mode == 0: # LoRa mode
+            if on: self.setMode(MODE_CAD)
+            else:  self.setMode(MODE_STDBY)
+
+
     def init(self, mode=None, pars=None):
         """init chip"""
-        if mode is not None: self.mode = mode
+        if mode is not None: self._mode = mode
         if pars: self.pars = pars
             
         # check version
@@ -431,12 +450,9 @@ class RADIO:
             raise Exception('Invalid SX127x selicon revision')
         
         # switch mode
-        if self.mode == 1:
-            self.fsk(True)
-        elif self.mode == 2:
-            self.ook(True)
-        else: # self.mode == 0
-            self.lora(True)
+        if   self._mode == 1: self.fsk(True)  # FSK
+        elif self._mode == 2: self.ook(True)  # OOK
+        else:                 self.lora(True) # LoRa
         
         # config RF frequency
         self.setFrequency(self.pars['freq_kHz'], self.pars['freq_Hz'])
@@ -447,7 +463,7 @@ class RADIO:
         # enable/disable CRC
         self.enableCRC(self.pars["crc"])
         
-        if self.mode == 0:
+        if self._mode == 0:
             # set LoRaTM options
             self.setBW(self.pars['bw'])
             self.setPower(self.pars['power'])
@@ -550,10 +566,19 @@ class RADIO:
             self.writeReg(REG_PA_DAC, 0x84) # default mode
 
     
+    def ramp(self, shaping=0, ramp=0x09):
+        """set modulation shaping code 0..3 (FSK/OOK) and PA rise/fall time code 0..15 (FSK/Lora)"""
+        shaping = min(max(shaping, 0), 3)
+        ramp    = min(max(ramp,    0), 15)
+        reg = self.readReg(REG_PA_RAMP)
+        reg = (reg & 0x90) | (shaping << 5) | ramp
+        self.writeReg(REG_PA_RAMP, reg)
+
+
     def enableCRC(self, crc=True, crcAutoClearOff=False):
         """enable/disable CRC (and set CrcAutoClearOff in FSK/OOK mode)"""
         self._crc = crc
-        if self.mode == 0: # LoRa mode
+        if self._mode == 0: # LoRa mode
             reg = self.readReg(REG_MODEM_CONFIG_2)
             reg = (reg | 0x04) if crc else (reg & ~0x04) # `RxPayloadCrcOn`
             self.writeReg(REG_MODEM_CONFIG_2, reg)
@@ -571,7 +596,7 @@ class RADIO:
 
     def rssi(self):
         """get RSSI [dB] (LoRa)"""
-        if self.mode == 0: # LoRa mode
+        if self._mode == 0: # LoRa mode
             return self.readReg(REG_PKT_RSSI_VALUE) - \
                    (164 if self.freq < 868000000 else 157)
         else: # FSK/OOK mode
@@ -580,7 +605,7 @@ class RADIO:
 
     def snr(self):
         """get SNR [dB]"""
-        if self.mode == 0: # LoRa mode
+        if self._mode == 0: # LoRa mode
             return (self.readReg(REG_PKT_SNR_VALUE)) * 0.25
         else: # FSK/OOK mode
             return self.readReg(REG_RSSI_VALUE) * 0.5 # FIXME
@@ -588,7 +613,7 @@ class RADIO:
 
     def irqFlags(self):
         """get IRQ flags for debug"""
-        if self.mode == 0: # LoRa mode
+        if self._mode == 0: # LoRa mode
             irqFlags = self.readReg(REG_IRQ_FLAGS)
             self.writeReg(REG_IRQ_FLAGS, irqFlags)
             return irqFlags
@@ -600,7 +625,7 @@ class RADIO:
     
     def enableRxIrq(self, enable=True):
         """enable/disable interrupt by RX done for debug (LoRa)"""
-        if self.mode == 0: # LoRa mode
+        if self._mode == 0: # LoRa mode
             reg = self.readReg(REG_IRQ_FLAGS_MASK)
             if enable: reg &= ~IRQ_RX_DONE_MASK
             else:      reg |=  IRQ_RX_DONE_MASK
@@ -609,7 +634,7 @@ class RADIO:
        
     def invertIQ(self, invert=True):
         """invert IQ channels (LoRa)"""
-        if self.mode == 0:
+        if self._mode == 0:
             reg = self.readReg(REG_INVERT_IQ)
             if invert:
                 reg |=  0x40 # `InvertIq` = 1 
@@ -620,7 +645,7 @@ class RADIO:
 
     def setSF(self, sf=10):
         """set Spreading Factor 6...12 (LoRa)"""
-        if self.mode == 0:
+        if self._mode == 0:
             sf = min(max(sf, 6), 12)
             self.writeReg(REG_DETECT_OPTIMIZE,     0xC5 if sf == 6 else 0xC3)
             self.writeReg(REG_DETECTION_THRESHOLD, 0x0C if sf == 6 else 0x0A)
@@ -630,13 +655,13 @@ class RADIO:
 
     def setLDRO(self, ldro):
         """set Low Data Rate Optimisation (LoRa)"""
-        if self.mode == 0:
+        if self._mode == 0:
             self.writeReg(REG_MODEM_CONFIG_3, # `LowDataRateOptimize`
                           (self.readReg(REG_MODEM_CONFIG_3) & ~0x08) | 0x08 if ldro else 0)
 
     def setBW(self, sbw):
         """set signal Band With 7.8-500 kHz (LoRa)"""
-        if self.mode == 0:
+        if self._mode == 0:
             bw = len(BW_TABLE) - 1
             for i in range(bw + 1):
                 if sbw <= BW_TABLE[i]:
@@ -648,7 +673,7 @@ class RADIO:
 
     def setCR(self, denominator):
         """set Coding Rate [5..8] (LoRa)"""
-        if self.mode == 0:
+        if self._mode == 0:
             denominator = min(max(denominator, 5), 8)        
             cr = denominator - 4
             self.writeReg(REG_MODEM_CONFIG_1, (self.readReg(REG_MODEM_CONFIG_1) & 0xF1) | (cr << 1))
@@ -656,20 +681,20 @@ class RADIO:
 
     def setPreamble(self, length):
         """set preamble length [6...65535] (LoRa)"""
-        if self.mode == 0:
+        if self._mode == 0:
             self.writeReg(REG_PREAMBLE_MSB, (length >> 8) & 0xFF)
             self.writeReg(REG_PREAMBLE_LSB, (length     ) & 0xFF)
         
         
     def setSW(self, sw): # LoRa mode only
         """set Sync Word (LoRa)"""
-        if self.mode == 0:
+        if self._mode == 0:
             self.writeReg(REG_SYNC_WORD, sw)
          
     
     def implicitHeaderMode(self, implicitHeaderMode=False):
         """set implicitHeaderMode (LoRa)"""
-        if self.mode == 0:
+        if self._mode == 0:
             if self._implicitHeaderMode != implicitHeaderMode:  # set value only if different.
                 self._implicitHeaderMode = implicitHeaderMode
                 modem_config_1 = self.readReg(REG_MODEM_CONFIG_1)
@@ -679,7 +704,7 @@ class RADIO:
         
     def bitrate(self, bitrate=4800., frac=None):
         """set bitrate [bit/s] (FSK/OOK)"""
-        if self.mode:
+        if self._mode:
             if bitrate:
                 code = int(round(FXOSC / bitrate)) # bit/s -> code
                 self.writeReg(REG_BITRATE_MSB,  (code >> 8) & 0xFF)
@@ -690,7 +715,7 @@ class RADIO:
 
     def fdev(self, fdev=5000.):
         """set frequency deviation (FSK)"""
-        if self.mode:
+        if self._mode:
             if fdev:
                 code = int(round(fdev / FSTEP)) # Hz -> code
                 code = min(max(code, 0), 0x3FFF)
@@ -700,7 +725,7 @@ class RADIO:
 
     def rxBW(self, bw=10.4):
         """set RX BW [kHz] (FSK/OOK)"""
-        if self.mode:
+        if self._mode:
             if bw:
                 m, e = get_rx_bw(bw)
                 self.writeReg(REG_RX_BW, (m << 3) | e)
@@ -708,7 +733,7 @@ class RADIO:
 
     def afcBW(self, bw=2.6):
         """set AFC BW [kHz] (FSK/OOK)"""
-        if self.mode:
+        if self._mode:
             if bw:
                 m, e = get_rx_bw(bw)
                 self.writeReg(REG_AFC_BW, (m << 3) | e)
@@ -716,7 +741,7 @@ class RADIO:
 
     def enableAFC(self, afc=True):
         """enable/disable AFC (FSK/OOK)"""
-        if self.mode:
+        if self._mode:
             reg = self.readReg(REG_RX_CONFIG)
             if afc: reg |=  0x10 # bit 4: AfcAutoOn -> 1
             else:   reg &= ~0x10 # bit 4: AfcAutoOn -> 0
@@ -725,7 +750,7 @@ class RADIO:
 
     def fixedLen(self, fixed=False):
         """set Fixed or Variable packet mode (FSK/OOK)"""
-        if self.mode:
+        if self._mode:
             reg = self.readReg(REG_PACKET_CONFIG_1)
             if fixed: reg &= ~0x80 # bit 7: PacketFormar -> 0 (fixed size)
             else:     reg |=  0x80 # bit 7: PacketFormat -> 1 (variable size)
@@ -734,7 +759,7 @@ class RADIO:
 
     def dcFree(self, mode=0):
         """set DcFree mode: 0=Off, 1=Manchester, 2=Whitening (FSK/OOK)"""
-        if self.mode:
+        if self._mode:
             reg = self.readReg(REG_PACKET_CONFIG_1)
             reg = (reg & 0x9F) | ((mode & 3) << 5) # bit 6-5 `DcFree`
             self.writeReg(REG_PACKET_CONFIG_1, reg)
@@ -742,7 +767,7 @@ class RADIO:
 
     def packetMode(self, packet=True):
         """set Packet or Continuous mode (FSK/OOK)"""
-        if self.mode:
+        if self._mode:
             reg = self.readReg(REG_PACKET_CONFIG_2)
             if packet: reg |=  0x40 # bit 6: `DataMode` 1 -> Packet mode
             else:      reg &= ~0x40 # bit 6: `DataMode` 0 -> Continuous mode
@@ -750,7 +775,7 @@ class RADIO:
     
     def rxCalibrate(self):
         """RSSI and IQ callibration (FSK/OOK)"""
-        if self.mode:
+        if self._mode:
             reg = self.readReg(REG_IMAGE_CAL)
             reg |= 0x40 # `ImageCalStart` bit
             self.writeReg(REG_IMAGE_CAL, reg)
@@ -774,7 +799,7 @@ class RADIO:
         buf = string.encode()
         size = len(buf)
         
-        if self.mode == 0: # LoRa mode
+        if self._mode == 0: # LoRa mode
             self.implicitHeaderMode(implicitHeader)
 
             # reset FIFO address and paload length 
@@ -853,9 +878,9 @@ class RADIO:
             self.pin_dio0.irq(trigger=0, handler=None)
         
 
-    def receive(self, size=0):
+    def receive(self, size=255):
         """go to RX mode; wait callback by interrupt (LoRa/FSK/OOK)"""
-        if self.mode == 0: # LoRa mode
+        if self._mode == 0: # LoRa mode
             if size > 0:
                 self.implicitHeaderMode(True)
                 self.writeReg(REG_PAYLOAD_LENGTH, size & 0xFF)  
@@ -874,7 +899,7 @@ class RADIO:
 
     def _handleOnReceive(self, event_source):
         #self.aquire_lock(True)
-        if self.mode == 0: # LoRa mode 
+        if self._mode == 0: # LoRa mode 
             irqFlags = self.readReg(REG_IRQ_FLAGS) # should be 0x50
             self.writeReg(REG_IRQ_FLAGS, irqFlags)
 
