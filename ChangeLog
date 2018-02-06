@@ -19,4 +19,10 @@
  + first test TX in FSK/OOK packet mode (control by RTL-SDR)
  + first test RX in FSK packet mode
 
+2018.02.06
+ + add port of ESP32 (tested)
+ + test and debug CRC on/off
+ + first test TX/RX in OOK packet mode
+
+
 

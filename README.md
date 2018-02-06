@@ -1,5 +1,5 @@
-Connect Ra-01 module base on LoRaTM SX127x chip to ESP8266 under MicroPython
-============================================================================
+Connect Ra-01 module base on LoRaTM SX127x chip to ESP8266/ESP32 under MicroPython
+==================================================================================
 
 ### Notes
 1. This is experimental example, not software product ready for use
@@ -16,8 +16,8 @@ Go to:
 1. "Getting started with MicroPython on the ESP8266"
 http://docs.micropython.org/en/latest/esp8266/esp8266/tutorial/intro.html
 
-2. "Firmware for ESP8266 boards"
-http://micropython.org/download#esp8266
+2. "Firmware for ESP8266/ESP32 boards"
+http://micropython.org/download
 
 ## Install `esptool.py` - ESP8266 & ESP32 ROM Bootloader Utility
 ```
@@ -34,28 +34,34 @@ $ cd esptool
 $ sudo python setup.py install
 ```
 
-## Flash firmware on ESP8266 board
+## Flash firmware on ESP8266/ESP32 board
+ESP8266:
 ```
 $ esptool.py --port /dev/ttyUSB0 erase_flash
 $ esptool.py --port /dev/ttyUSB0 --baud 115200 write_flash --flash_size=detect 0 firmware.bin
 ```
+ESP32:
+```
+$ esptool.py --chip esp32 --port /dev/ttyUSB0 erase_flash
+$ esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash -z 0x1000 firmware.bin
+```
 
-## Connect LoRa module to ESP8266
+## Connect LoRa module to ESP8266/ESP32
 
-| ESP GPIO | NodeMCU v3 |   Signal    | SX1278 (color)  |
-| -------- | ---------- | ----------- | --------------- |
-|     0    |     D3     |             |                 |
-|     2    |     -      |  Blue LED   |                 |
-|     4    |     D2     |    IRQ      | DIO0  (yellow)  |
-|     5    |     D1     |    RESET    | RESET (magenta) |
-|    10    |     SK     |             |                 |
-|    12    |     D6     |    MISO     | MISO  (blue)    |
-|    13    |     D7     |    MOSI     | MOSI  (green)   |
-|    14    |     D5     |    SCK      | SCK   (white)   |
-|    15    |     D8     |    CS       | NSS   (grey)    |
-|    16    |     D0     |             |                 |
-|          |     3V     |    3.3V     | 3.3V  (red)     |
-|          |     G      |    GND      | GND   (black)   |
+|   GPIO   | DOIT ESP32 | NodeMCU v3 |   Signal    | SX1278 (color)  |
+| -------- | ---------- | ---------- | ----------- | --------------- |
+|     0    |    -       |     D3     |             |                 |
+|     2    |    D2      |     -      |  Blue LED   |                 |
+|     4    |    D4      |     D2     |    IRQ      | DIO0  (yellow)  |
+|     5    |    D5      |     D1     |    RESET    | RESET (magenta) |
+|    10    |    -       |     SK     |             |                 |
+|    12    |    D12     |     D6     |    MISO     | MISO  (blue)    |
+|    13    |    D13     |     D7     |    MOSI     | MOSI  (green)   |
+|    14    |    D14     |     D5     |    SCK      | SCK   (white)   |
+|    15    |    D15     |     D8     |    CS       | NSS   (grey)    |
+|    16    |    -       |     D0     |             |                 |
+|          |    3V3     |     3V     |    3.3V     | 3.3V  (red)     |
+|          |    GND     |     G      |    GND      | GND   (black)   |
 
 ## Build `mpy-cross`
 
@@ -86,10 +92,16 @@ $ cd ampy
 $ sudo python setup.py install
 ```
 
+## Read and edit "main.py" and "sx127x.py" for you, compile "sx127x.py"
+```
+$ vim sx127x.py
+$ vim main.py
+$ mpy-cross -O3 sx127x.py
+```
+
 ## Load python examples to module
 ```
-$ mpy-cross -O3 lora.py
-$ ampy --port /dev/ttyUSB0 put lora.mpy
+$ ampy --port /dev/ttyUSB0 put sx127x.mpy
 $ ampy --port /dev/ttyUSB0 put main.py
 ```
 

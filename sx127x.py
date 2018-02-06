@@ -9,12 +9,18 @@ from time import sleep_ms
 import gc
 gc.collect()
 
+# ATTENTION PLEASE!!! ESP8266 or ESP32???
+#ESP32 = True
+ESP32 = False
+
+# onboard LED active level
+LED_ON = 1 if ESP32 else 0
+
 MICROPYTHON = True
 
 # Common registers
 REG_FIFO      = 0x00 # FIFO read/write access
 REG_OP_MODE   = 0x01 # Operation mode & LoRaTM/FSK selection
-
 REG_FRF_MSB   = 0x06 # RF Carrier Frequency, MSB
 REG_FRF_MID   = 0x07 # RF Carrier Frequency, Mid
 REG_FRF_LSB   = 0x08 # RF Carrier Frequency, LSB
@@ -119,7 +125,7 @@ REG_PAYLOAD_LENGTH = 0x22
 REG_MODEM_CONFIG_3 = 0x26
 REG_RSSI_WIDEBAND  = 0x2C
 
-REG_DETECTION_OPTIMIZE  = 0x31
+REG_DETECT_OPTIMIZE     = 0x31
 REG_INVERT_IQ           = 0x33
 REG_DETECTION_THRESHOLD = 0x37
 REG_SYNC_WORD           = 0x39
@@ -193,7 +199,11 @@ LORA = 0
 FSK  = 1
 OOK  = 2
 
-# RX BandWith table
+# BandWith table [kHz] (LoRa)
+BW_TABLE = ( 7.8, 10.4, 15.6, 20.8, 31.25,
+            41.7, 62.5, 125., 250., 500.)
+
+# RX BandWith table (FSK/OOK)
 RX_BW_TABLE = (
   # mant exp kHz 
   (0b10, 7,   2.6),
@@ -232,25 +242,24 @@ class RADIO:
                  pars = {'freq_kHz':         433000, # kHz
                          'freq_Hz':          0,      # Hz
                          'power':            10,     # dBm
-                         'crc':              False,
+                         'crc':              True,   # CRC on/off
                          # LoRa mode:
-                         'bw':               125e3,  # kHz
-                         'sf':               10,     # 6..12
-                         'cr':               5,      # 5...8
-                         'ldr' :             None,   # Low Data Rate Optimize
-                         'sw':               0x12,
-                         'preamble':         8,      # 6...65k
+                         'bw':               125,    # BW: 7.8...500 kHz
+                         'sf':               10,     # SF: 6..12
+                         'cr':               5,      # CR: 5...8
+                         'ldro':             None,   # Low Data Rate Optimize (None - automatic)
+                         'sw':               0x12,   # Sync Word (allways 0x12)
+                         'preamble':         8,      # 6...65535
                          'implicit_header':  False,
                          # FSK/OOK mode:
-                         'bitrate':          1200.,  # bit/s
-                         'fdev':             6000.,  # frequency deviation [Hz]
-                         'rx_bw':            10.4,   # 2,6...250 kHz
-                         'afc_bw':            2.6,   # 2,6...250 kHz
-                         'afc':              False,
-                         'fixed':            False,
-                         'dcfree':           0},     # 0, 1 or 2
-                 gpio = {'led':    2,   # blue led
-                         'led_on': 0,   # led on level (0 or 1)
+                         'bitrate':          4800., # bit/s
+                         'fdev':             5000., # frequency deviation [Hz]
+                         'rx_bw':            10.4,  # 2.6...250 kHz
+                         'afc_bw':            2.6,  # 2.6...250 kHz
+                         'afc':              False, # AFC on/off
+                         'fixed':            False, # fixed packet size or variable
+                         'dcfree':           0},    # 0=None, 1=Manchester or 2=Whitening
+                 gpio = {'led':    2,   # blue LED GPIO number on board
                          'reset':  5,   # reset pin from GPIO5
                          'dio0':   4,   # DIO0 line to GPIO4
                          'cs':     15,  # SPI CS
@@ -263,8 +272,7 @@ class RADIO:
 
         # init GPIO
         self.pin_led = Pin(gpio['led'], Pin.OUT)
-        self.led_on  = gpio['led_on']
-        self.led(False) # LED off
+        self.led(0) # LED off
         if gpio['reset'] != None:
           self.pin_reset = Pin(gpio['reset'], Pin.OUT, Pin.PULL_UP)
           self.pin_reset.value(1)
@@ -277,7 +285,11 @@ class RADIO:
         # init SPI
         if spi_hardware:
             if spi_baudrate == None: spi_baudrate = 5000000 # 5MHz
-            self.spi = SPI(1, baudrate=spi_baudrate, polarity=0, phase=0)
+            if ESP32:
+                self.spi = SPI(1, baudrate=spi_baudrate, polarity=0, phase=0,
+                               sck=Pin(14), mosi=Pin(13), miso=Pin(12))
+            else:
+                self.spi = SPI(1, baudrate=spi_baudrate, polarity=0, phase=0)
         else:
             if spi_baudrate == None: spi_baudrate = 500000 # 500kHz
             self.spi = SPI(-1, baudrate=spi_baudrate, polarity=0, phase=0,
@@ -292,7 +304,7 @@ class RADIO:
         self.onReceive(onReceive)        
         #self._lock = False
         self.reset()
-        self.mode = 0 # LoRa mode by default (FIXME)
+        self.mode = 0 # LoRa mode by default
         self.init(mode, pars)
 
 
@@ -323,7 +335,7 @@ class RADIO:
 
     def led(self, on=True):
         """on/off LED on GPIO pin"""
-        self.pin_led.value(not self.led_on ^ on)
+        self.pin_led.value(not LED_ON ^ on)
 
 
     def blink(self, times=1, on_ms=100, off_ms=20):
@@ -364,17 +376,17 @@ class RADIO:
 
     def lora(self, lora=True):
         """switch to LoRa mode"""
-        mode  = self.readReg(REG_OP_MODE)  # read mode
+        mode  = self.readReg(REG_OP_MODE) # read mode
         sleep = (mode & ~MODES_MASK) | MODE_SLEEP
-        self.writeReg(REG_OP_MODE, sleep)  # go to sleep
+        self.writeReg(REG_OP_MODE, sleep) # go to sleep
         if lora:
             sleep |= MODE_LONG_RANGE 
             mode  |= MODE_LONG_RANGE
         else:
             sleep &= ~MODE_LONG_RANGE 
             mode  &= ~MODE_LONG_RANGE
-        self.writeReg(REG_OP_MODE, sleep)  # write "long range" bit
-        self.writeReg(REG_OP_MODE, mode)   # restore old mode
+        self.writeReg(REG_OP_MODE, sleep) # write "long range" bit
+        self.writeReg(REG_OP_MODE, mode)  # restore old mode
         
 
     def isLora(self):
@@ -443,13 +455,17 @@ class RADIO:
             self.implicitHeaderMode(self.pars['implicit_header'])      
             sf = self.pars['sf']
             self.setSF(sf)
-            ldr = self.pars['ldr']
-            if ldr == None:
-                ldr = True if sf >= 10 else False
-            self.setLDR(ldr)
+            ldro = self.pars['ldro']
+            if ldro == None:
+                ldro = True if sf >= 10 else False # FIXME
+            self.setLDRO(ldro)
             self.setCR(self.pars['cr'])
             self.setPreamble(self.pars['preamble'])
             self.setSW(self.pars['sw'])
+            
+            # set AGC auto on (internal AGC loop)
+            self.writeReg(REG_MODEM_CONFIG_3,
+                          self.readReg(REG_MODEM_CONFIG_3) | 0x04) # `AgcAutoOn`
             
             # set base addresses
             self.writeReg(REG_FIFO_TX_BASE_ADDR, FIFO_TX_BASE_ADDR)
@@ -482,7 +498,7 @@ class RADIO:
             # set TX start FIFO condition
             self.writeReg(REG_FIFO_THRESH, TX_START_FIFO_NOEMPTY)
             
-            # set DIO0 mapping:
+            # set DIO0 mapping (by default):
             #    in RxContin - `SyncAddres`
             #    in TxContin - `TxReady`
             #    in RxPacket - `PayloadReady` <- used signal
@@ -534,16 +550,17 @@ class RADIO:
             self.writeReg(REG_PA_DAC, 0x84) # default mode
 
     
-    def enableCRC(self, crc=True):
-        """enable/disable CRC"""
+    def enableCRC(self, crc=True, crcAutoClearOff=False):
+        """enable/disable CRC (and set CrcAutoClearOff in FSK/OOK mode)"""
+        self._crc = crc
         if self.mode == 0: # LoRa mode
             reg = self.readReg(REG_MODEM_CONFIG_2)
-            reg = (reg | 0x04) if crc else (reg & 0xFB) # `RxPayloadCrcOn`
+            reg = (reg | 0x04) if crc else (reg & ~0x04) # `RxPayloadCrcOn`
             self.writeReg(REG_MODEM_CONFIG_2, reg)
         else: # FSK/OOK mode
-            reg = self.readReg(REG_PACKET_CONFIG_1)
-            reg = (reg | 0x10) if crc else (reg & 0xEF) # `CrcOn`
-            # FIXME 0x80 - `CrcAutoClearOff` - ???
+            reg = self.readReg(REG_PACKET_CONFIG_1) & ~0x18
+            if crc:             reg |= 0x10 # `CrcOn`
+            if crcAutoClearOff: reg |= 0x08 # `CrcAutoClearOff`
             self.writeReg(REG_PACKET_CONFIG_1, reg)
  
     
@@ -605,28 +622,24 @@ class RADIO:
         """set Spreading Factor 6...12 (LoRa)"""
         if self.mode == 0:
             sf = min(max(sf, 6), 12)
-            self.writeReg(REG_DETECTION_OPTIMIZE,  0xC5 if sf == 6 else 0xC3)
+            self.writeReg(REG_DETECT_OPTIMIZE,     0xC5 if sf == 6 else 0xC3)
             self.writeReg(REG_DETECTION_THRESHOLD, 0x0C if sf == 6 else 0x0A)
             self.writeReg(REG_MODEM_CONFIG_2,
-                               (self.readReg(REG_MODEM_CONFIG_2) & 0x0F) | ((sf << 4) & 0xF0))
+                          (self.readReg(REG_MODEM_CONFIG_2) & 0x0F) | ((sf << 4) & 0xF0))
 
-            # set AGC auto on (internal AGC loop)
-            self.writeReg(REG_MODEM_CONFIG_3,
-                               self.readReg(REG_MODEM_CONFIG_3) | 0x04)
 
-    def setLDR(self, ldr):
+    def setLDRO(self, ldro):
         """set Low Data Rate Optimisation (LoRa)"""
         if self.mode == 0:
-            self.writeReg(REG_MODEM_CONFIG_3,
-                               (self.readReg(REG_MODEM_CONFIG_3) & ~0x08) | 0x08 if ldr else 0)
+            self.writeReg(REG_MODEM_CONFIG_3, # `LowDataRateOptimize`
+                          (self.readReg(REG_MODEM_CONFIG_3) & ~0x08) | 0x08 if ldro else 0)
 
     def setBW(self, sbw):
         """set signal Band With 7.8-500 kHz (LoRa)"""
         if self.mode == 0:
-            bins = (7.8e3, 10.4e3, 15.6e3, 20.8e3, 31.25e3, 41.7e3, 62.5e3, 125e3, 250e3, 500e3)
-            bw = 9 # max 500kHz
-            for i in range(len(bins)):
-                if sbw <= bins[i]:
+            bw = len(BW_TABLE) - 1
+            for i in range(bw + 1):
+                if sbw <= BW_TABLE[i]:
                     bw = i
                     break
             self.writeReg(REG_MODEM_CONFIG_1, \
@@ -768,7 +781,7 @@ class RADIO:
             self.writeReg(REG_FIFO_ADDR_PTR, FIFO_TX_BASE_ADDR)
             self.writeReg(REG_PAYLOAD_LENGTH, 0)
 
-            # check size (FIXME!!!)
+            # check size
             currentLength = self.readReg(REG_PAYLOAD_LENGTH)
             size = min(size, (MAX_PKT_LENGTH - FIFO_TX_BASE_ADDR - currentLength))
 
@@ -790,7 +803,7 @@ class RADIO:
             self.writeReg(REG_IRQ_FLAGS, IRQ_TX_DONE)
            
         else: # FSK/OOK mode
-            size = min(size, 127) # limit size FIXME why 127 ?!
+            size = min(size, 256) # limit size FIXME
 
             # set TX start FIFO condition
             #self.writeReg(REG_FIFO_THRESH, TX_START_FIFO_NOEMPTY)
@@ -866,13 +879,13 @@ class RADIO:
             self.writeReg(REG_IRQ_FLAGS, irqFlags)
 
             if (irqFlags & IRQ_RX_DONE) == 0: # check `RxDone`
+                #self.aquire_lock(False)
                 return # `RxDone` is not set
 
-            print("DIO0 interrupt in LoRa mode by `RxDone` (RegIrqFlags=0x%02X)" % irqFlags)
+            #print("DIO0 interrupt in LoRa mode by `RxDone` (RegIrqFlags=0x%02X)" % irqFlags)
 
-            if irqFlags & IRQ_PAYLOAD_CRC_ERROR: # check `PayloadCrcError`
-                print("=> CRC error (PayLoadCrcError=1)")
-                return # CRC error
+            # check `PayloadCrcError` bit
+            crcOk = not bool (irqFlags & IRQ_PAYLOAD_CRC_ERROR)
             
             # set FIFO address to current RX address
             self.writeReg(REG_FIFO_ADDR_PTR, self.readReg(REG_FIFO_RX_CURRENT_ADDR))
@@ -882,15 +895,15 @@ class RADIO:
                         self.readReg(REG_RX_NB_BYTES)
                            
         else: # FSK/OOK mode
-            irqFlags = self.readReg(REG_IRQ_FLAGS_2) # should be 0x?? FIXME
+            irqFlags = self.readReg(REG_IRQ_FLAGS_2) # should be 0x26/0x24
             if (irqFlags & IRQ2_PAYLOAD_READY) == 0:
+                #self.aquire_lock(False)
                 return # `PayloadReady` is not set
             
             print("DIO0 interrupt in FSK/OOK mode by `PayloadReady` (RegIrqFlags2=0x%02X)" % irqFlags)
             
-            if (irqFlags & IRQ2_CRC_OK) == 0: # check `CrcOk`
-                print("=> CRC error (CrcOk=0)")
-                return # CRC error
+            # check `CrcOk` bit
+            crcOk = bool(irqFlags & IRQ2_CRC_OK)
             
             # read packet length
             if self.readReg(REG_PACKET_CONFIG_1) & 0x80: # `PacketFormat`
@@ -907,7 +920,7 @@ class RADIO:
 
         # run callback
         if self._onReceive:
-            self._onReceive(self, payload)
+            self._onReceive(self, payload, crcOk if self._crc else None)
         self.collect()
 
         #self.aquire_lock(False)
