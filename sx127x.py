@@ -457,8 +457,8 @@ class RADIO:
         # config RF frequency
         self.setFrequency(self.pars['freq_kHz'], self.pars['freq_Hz'])
 
-        # set LNA boost
-        self.writeReg(REG_LNA, self.readReg(REG_LNA) | 0x03)
+        # set LNA boost `LnaBoostHf`->3
+        self.writeReg(REG_LNA, self.readReg(REG_LNA) | 0x03) 
             
         # enable/disable CRC
         self.enableCRC(self.pars["crc"])
@@ -491,7 +491,7 @@ class RADIO:
             self.writeReg(REG_DIO_MAPPING_1, 0x00)
         else:
             # set FSK/OOK options
-            self.packetMode(True) # FIXME
+            self.continuous(False) # packet mode by default
             self.bitrate(  self.pars["bitrate"])
             self.fdev(     self.pars["fdev"])
             self.rxBW(     self.pars["rx_bw"])
@@ -590,8 +590,8 @@ class RADIO:
  
     
     def getRxGain(self):
-        """get current RX gain [1..6] from `RegLna` (1 - maximum gain)"""
-        return (self.readReg(REG_LNA) >> 5) & 0x07;
+        """get current RX gain code [1..6] from `RegLna` (1 - maximum gain)"""
+        return (self.readReg(REG_LNA) >> 5) & 0x07 # `LnaGain`
 
 
     def rssi(self):
@@ -765,14 +765,15 @@ class RADIO:
             self.writeReg(REG_PACKET_CONFIG_1, reg)
 
 
-    def packetMode(self, packet=True):
-        """set Packet or Continuous mode (FSK/OOK)"""
+    def continuous(self, on=True):
+        """select Continuous mode, must use DIO2->DATA, DIO1->DCLK (FSK/OOK)"""
         if self._mode:
             reg = self.readReg(REG_PACKET_CONFIG_2)
-            if packet: reg |=  0x40 # bit 6: `DataMode` 1 -> Packet mode
-            else:      reg &= ~0x40 # bit 6: `DataMode` 0 -> Continuous mode
+            if on: reg &= ~0x40 # bit 6: `DataMode` 0 -> Continuous mode
+            else:  reg |=  0x40 # bit 6: `DataMode` 1 -> Packet mode
             self.writeReg(REG_PACKET_CONFIG_2, reg)
     
+
     def rxCalibrate(self):
         """RSSI and IQ callibration (FSK/OOK)"""
         if self._mode:
