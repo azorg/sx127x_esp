@@ -44,9 +44,9 @@ def on_receive(tr, payload, crcOk):
 
 
 # init SX127x RF module
-#tr = sx127x.RADIO(mode=sx127x.LORA)
+tr = sx127x.RADIO(mode=sx127x.LORA)
 #tr = sx127x.RADIO(mode=sx127x.FSK)
-tr = sx127x.RADIO(mode=sx127x.OOK)
+#tr = sx127x.RADIO(mode=sx127x.OOK)
 
 tr.setFrequency(433000,000) # kHz, Hz
 tr.setPower(10, True)       # power +10dBm (RFO pin if False or PA_BOOST pin if True)
@@ -72,7 +72,7 @@ else: # FSK/OOK mode
 
 tr.collect()
 
-if 0: # <- LOOK HERE and CHANGE!!!
+if 1: # <- LOOK HERE and CHANGE!!!
     # transmitter
     while True:
         tr.blink()

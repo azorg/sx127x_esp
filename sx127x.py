@@ -1,5 +1,5 @@
 # -*- coding: UTF8 -*-
-# Micropython driver for Semtech SX127x famaly chips
+# Micropython ESP8266/ESP32 driver for Semtech SX127x famaly chips
 # Author: Alex Zorg <azorg(at)mail.ru>
 # Licenced by GPLv3
 
@@ -9,7 +9,7 @@ from time import sleep_ms
 import gc
 gc.collect()
 
-# ATTENTION PLEASE!!! ESP8266 or ESP32???
+# ATTENTION PLEASE: select ESP8266 or ESP32
 #ESP32 = True
 ESP32 = False
 
@@ -43,7 +43,6 @@ REG_AGC_THRESH_2 = 0x63 # ...
 REG_AGC_THRESH_3 = 0x64 # ...
 
 REG_PLL = 0x70 # Contral of the PLL bandwidth
-
 
 # FSK/OOK mode registers
 REG_BITRATE_MSB     = 0x02 # Bit rate settings, MSB
@@ -103,7 +102,6 @@ REG_IRQ_FLAGS_2     = 0x3F # Status register: FIFO handing, flags, Low Battery
 
 REG_PLL_HOP      = 0x44 # Control the fast frequency hopping mode
 REG_BITRATE_FRAC = 0x5D # Fraction part in the Bit Rate division ratio
-
 
 # LoRaTM mode registers
 REG_FIFO_ADDR_PTR        = 0x0D
@@ -184,15 +182,13 @@ TX_START_FIFO_NOEMPTY = 0x80 # bit 7: 1 -> `FifoEmpty` (start if FIFO no empty)
 # REG_IRQ_FLAGS_MASK (`RegIrqFlagsMask` in datasheet) bits (LoRa)
 IRQ_RX_DONE_MASK = 0x40 # bit 6: `RxDoneMask`
 
-# Buffer size
-MAX_PKT_LENGTH = 255
-
 FIFO_TX_BASE_ADDR = 0x00 # 0x80 FIXME
 FIFO_RX_BASE_ADDR = 0x00 
 
 # Constants
 FXOSC = 32e6 # 32 MHz
 FSTEP = FXOSC / 2**19 # ~61.03515625 Hz
+MAX_PKT_LENGTH = 255 # maximum packet length [bytes]
 
 # RADIO class mode
 LORA = 0
@@ -879,7 +875,7 @@ class RADIO:
             self.pin_dio0.irq(trigger=0, handler=None)
         
 
-    def receive(self, size=255):
+    def receive(self, size=MAX_PKT_LENGTH):
         """go to RX mode; wait callback by interrupt (LoRa/FSK/OOK)"""
         if self._mode == 0: # LoRa mode
             if size > 0:
