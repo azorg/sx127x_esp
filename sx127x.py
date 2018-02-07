@@ -255,13 +255,13 @@ class RADIO:
                          'afc':              False, # AFC on/off
                          'fixed':            False, # fixed packet size or variable
                          'dcfree':           0},    # 0=None, 1=Manchester or 2=Whitening
-                 gpio = {'led':    2,   # blue LED GPIO number on board
-                         'reset':  5,   # reset pin from GPIO5
-                         'dio0':   4,   # DIO0 line to GPIO4
-                         'cs':     15,  # SPI CS
-                         'sck':    14,  # SPI SCK
-                         'mosi':   13,  # SPI MOSI
-                         'miso':   12}, # SPI MISO
+                 gpio = {'led':    2,    # blue LED GPIO number on board
+                         'reset':  5,    # reset pin from GPIO5 (or may be None)
+                         'dio0':   4,    # DIO0 line to GPIO4
+                         'cs':     15,   # SPI CS
+                         'sck':    14,   # SPI SCK
+                         'mosi':   13,   # SPI MOSI
+                         'miso':   12},  # SPI MISO
                  spi_hardware = True,
                  spi_baudrate = None,
                  onReceive    = None): # receive callback

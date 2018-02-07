@@ -24,3 +24,5 @@
  + test and debug CRC on/off
  + first test TX/RX in OOK packet mode
  + add ramp(), rx(), tx(), cad() methods
+ * test continuius TX mode (DIO2/DATA + DIO1/DCLK) by morse beeper 
+

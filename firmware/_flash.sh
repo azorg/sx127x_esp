@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if false
+if true
 then
   # ESP8266
   #FIRMWARE="esp8266-20171101-v1.9.3.bin"

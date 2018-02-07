@@ -51,17 +51,21 @@ $ esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash -z 0x1000 firmware.bin
 |   GPIO   | DOIT ESP32 | NodeMCU v3 |   Signal    | SX1278 (color)  |
 | -------- | ---------- | ---------- | ----------- | --------------- |
 |     0    |    -       |     D3     |             |                 |
-|     2    |    D2      |     -      |  Blue LED   |                 |
+|     2    |    D2      |     D4     |  Blue LED   |                 |
 |     4    |    D4      |     D2     |    IRQ      | DIO0  (yellow)  |
-|     5    |    D5      |     D1     |    RESET    | RESET (magenta) |
-|    10    |    -       |     SK     |             |                 |
+|     5    |    D5      |     D1     | HARD RESET  | RESET (magenta) |
+|     9    |    -       |     S2?    |             |                 |
+|    10    |    -       |   S3/SK?   |             |                 |
 |    12    |    D12     |     D6     |    MISO     | MISO  (blue)    |
 |    13    |    D13     |     D7     |    MOSI     | MOSI  (green)   |
 |    14    |    D14     |     D5     |    SCK      | SCK   (white)   |
 |    15    |    D15     |     D8     |    CS       | NSS   (grey)    |
-|    16    |    -       |     D0     |             |                 |
+|    16    |    -       |     D0     |    DATA*    | DIO2* (brown)   |
+|          |            |            |    DCLK*    | DIO1* (orange)  |
 |          |    3V3     |     3V     |    3.3V     | 3.3V  (red)     |
 |          |    GND     |     G      |    GND      | GND   (black)   |
+
+Note: DIO2(DATA) is optional and may used in continuous FSK/OOK mode
 
 ## Build `mpy-cross`
 
@@ -92,14 +96,14 @@ $ cd ampy
 $ sudo python setup.py install
 ```
 
-## Read and edit "main.py" and "sx127x.py" for you, compile "sx127x.py"
+## Read and edit "main.py" and "sx127x.py", compile "sx127x.py"
 ```
 $ vim sx127x.py
 $ vim main.py
 $ mpy-cross -O3 sx127x.py
 ```
 
-## Load python examples to module
+## Load python examples to ESP module
 ```
 $ ampy --port /dev/ttyUSB0 put sx127x.mpy
 $ ampy --port /dev/ttyUSB0 put main.py

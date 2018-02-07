@@ -1,6 +1,7 @@
 #import esp
 #esp.osdebug(None)
 import gc
+from machine import Pin
 import time
 #import utime
 #import network
@@ -44,9 +45,9 @@ def on_receive(tr, payload, crcOk):
 
 
 # init SX127x RF module
-tr = sx127x.RADIO(mode=sx127x.LORA)
+#tr = sx127x.RADIO(mode=sx127x.LORA)
 #tr = sx127x.RADIO(mode=sx127x.FSK)
-#tr = sx127x.RADIO(mode=sx127x.OOK)
+tr = sx127x.RADIO(mode=sx127x.OOK)
 
 tr.setFrequency(433000,000) # kHz, Hz
 tr.setPower(10, True)       # power +10dBm (RFO pin if False or PA_BOOST pin if True)
@@ -72,17 +73,77 @@ else: # FSK/OOK mode
 
 tr.collect()
 
-if 1: # <- LOOK HERE and CHANGE!!!
+# LOOK HERE and CHANGE!!!
+#MODE = 0 # do nothing
+#MODE = 1 # transmitter
+#MODE = 2 # reseiver
+MODE = 3 # morse transmitter in continuous mode
+
+if MODE == 1:
     # transmitter
     while True:
         tr.blink()
         tr.send("Hello!")
         time.sleep_ms(3000)
 
-else:
+elif MODE == 2:
     # reseiver
     tr.onReceive(on_receive) # set the receive callback
     tr.receive() # go into receive mode
     time.sleep(-1) # wait interrupt
+
+
+msg = "-- --- ..." # "MOS"
+pause   = 1500 # ms
+t_pause = 150  # ms
+t_dot   = 150  # ms
+t_line  = 450  # ms
+t_space = 450  # ms
+
+if MODE == 0 or MODE == 3:
+    DATA = Pin(16, Pin.OUT) # DIO2/DATA
+    #DCLK = Pin(16, Pin.OUT) # DIO1/DCLK
+    #DCLK.value(0)
+
+def data(value=1):
+    DATA.value(value)
+    tr.led(value)
+    #DCLK.value(1)
+    #DCLK.value(0)
+
+def delay(ms):
+    time.sleep_ms(ms)
+
+def morse_send(msg):
+    tr.tx(True)
+    for c in msg:
+        if c == '.':
+            data(1)
+            delay(t_dot)
+            data(0)
+            delay(t_pause)
+        elif c == '-':
+            data(1)
+            delay(t_line)
+            data(0)
+            delay(t_pause)
+        elif c == ' ':
+            data(0)
+            delay(t_space)
+    tr.tx(False)
+
+if MODE == 3:
+    # morse transmitter in continuous FSK/OOK mode
+    tr.ook()
+    #tr.fsk()
+    tr.continuous()
+    while True:
+        morse_send(msg)
+        delay(pause)
+
+elif MODE == 0:
+    # do "nothing"
+    tr.ook()
+    tr.continuous()
 
 
