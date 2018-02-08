@@ -437,7 +437,7 @@ class RADIO:
     def init(self, mode=None, pars=None):
         """init chip"""
         if mode is not None: self._mode = mode
-        if pars: self.pars = pars
+        if pars: self._pars = pars
             
         # check version
         version = self.version()
@@ -446,34 +446,34 @@ class RADIO:
             raise Exception('Invalid SX127x selicon revision')
         
         # switch mode
-        if   self._mode == 1: self.fsk(True)  # FSK
-        elif self._mode == 2: self.ook(True)  # OOK
-        else:                 self.lora(True) # LoRa
+        if   self._mode == 1: self.fsk()  # FSK
+        elif self._mode == 2: self.ook()  # OOK
+        else:                 self.lora() # LoRa
         
         # config RF frequency
-        self.setFrequency(self.pars['freq_kHz'], self.pars['freq_Hz'])
+        self.setFrequency(self._pars['freq_kHz'], self._pars['freq_Hz'])
 
         # set LNA boost `LnaBoostHf`->3
         self.writeReg(REG_LNA, self.readReg(REG_LNA) | 0x03) 
             
         # enable/disable CRC
-        self.enableCRC(self.pars["crc"])
+        self.enableCRC(self._pars["crc"])
         
         if self._mode == 0:
             # set LoRaTM options
-            self.setBW(self.pars['bw'])
-            self.setPower(self.pars['power'])
+            self.setBW(self._pars['bw'])
+            self.setPower(self._pars['power'])
             self._implicitHeaderMode = None
-            self.implicitHeaderMode(self.pars['implicit_header'])      
-            sf = self.pars['sf']
+            self.implicitHeaderMode(self._pars['implicit_header'])      
+            sf = self._pars['sf']
             self.setSF(sf)
-            ldro = self.pars['ldro']
+            ldro = self._pars['ldro']
             if ldro == None:
                 ldro = True if sf >= 10 else False # FIXME
             self.setLDRO(ldro)
-            self.setCR(self.pars['cr'])
-            self.setPreamble(self.pars['preamble'])
-            self.setSW(self.pars['sw'])
+            self.setCR(self._pars['cr'])
+            self.setPreamble(self._pars['preamble'])
+            self.setSW(self._pars['sw'])
             
             # set AGC auto on (internal AGC loop)
             self.writeReg(REG_MODEM_CONFIG_3,
@@ -488,13 +488,13 @@ class RADIO:
         else:
             # set FSK/OOK options
             self.continuous(False) # packet mode by default
-            self.bitrate(  self.pars["bitrate"])
-            self.fdev(     self.pars["fdev"])
-            self.rxBW(     self.pars["rx_bw"])
-            self.afcBW(    self.pars["afc_bw"])
-            self.fixedLen( self.pars["fixed"])
-            self.enableAFC(self.pars["afc"])
-            self.dcFree(   self.pars["dcfree"])
+            self.bitrate(  self._pars["bitrate"])
+            self.fdev(     self._pars["fdev"])
+            self.rxBW(     self._pars["rx_bw"])
+            self.afcBW(    self._pars["afc_bw"])
+            self.fixedLen( self._pars["fixed"])
+            self.enableAFC(self._pars["afc"])
+            self.dcFree(   self._pars["dcfree"])
             
             self.writeReg(REG_RSSI_TRESH, 0xFF) # default
             self.writeReg(REG_PREAMBLE_LSB, 8) # 3 by default

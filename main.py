@@ -129,9 +129,11 @@ def morse_send(msg):
             delay(t_space)
     tr.tx(False)
 
+
 if MODE == 3:
     # morse transmitter in continuous FSK/OOK mode
-    tr.ook()
+    tr.init(mode=sx127x.OOK)
+    #tr.ook()
     #tr.fsk()
     tr.continuous()
     while True:
@@ -140,7 +142,8 @@ if MODE == 3:
 
 elif MODE == 0:
     # do "nothing"
-    tr.ook()
+    tr.init(mode=sx127x.OOK)
+    #tr.ook()
     tr.continuous()
 
 
