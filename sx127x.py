@@ -785,7 +785,7 @@ class RADIO:
         bw = min(max(bw, 0), 3)
         reg = self.readReg(REG_PLL)
         reg = (reg & 0x3F) | (bw << 6)
-        self.writeReg(REG_PLL)
+        self.writeReg(REG_PLL, reg)
 
 
     def fastHop(self, on=True):
@@ -793,7 +793,7 @@ class RADIO:
         if self._mode:
             reg = self.readReg(REG_PLL_HOP)
             reg = reg | 0x80 if on else reg & 0x7F # `FastHopOn`
-            self.writeReg(REG_PLL_HOP)
+            self.writeReg(REG_PLL_HOP, reg)
 
 
     #def aquire_lock(self, lock=False):        
