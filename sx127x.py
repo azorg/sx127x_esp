@@ -780,7 +780,7 @@ class RADIO:
                 pass # FIXME: check timeout
 
 
-    def pllBW(bw=3):
+    def pllBW(self, bw=3):
         """set PLL bandwidth 0=75, 1=150, 2=225, 3=300 kHz (LoRa/FSK/OOK)"""
         bw = min(max(bw, 0), 3)
         reg = self.readReg(REG_PLL)
@@ -788,7 +788,7 @@ class RADIO:
         self.writeReg(REG_PLL)
 
 
-    def fastHop(on=True):
+    def fastHop(self, on=True):
         """on/off fast frequency PLL hopping (FSK/OOK)"""
         if self._mode:
             reg = self.readReg(REG_PLL_HOP)
