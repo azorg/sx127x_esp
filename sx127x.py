@@ -20,7 +20,7 @@ MICROPYTHON = True
 
 # Common registers
 REG_FIFO      = 0x00 # FIFO read/write access
-REG_OP_MODE   = 0x01 # Operation mode & LoRaTM/FSK selection
+REG_OP_MODE   = 0x01 # Operation mode & LoRaTM/FSK/OOK selection
 REG_FRF_MSB   = 0x06 # RF Carrier Frequency, MSB
 REG_FRF_MID   = 0x07 # RF Carrier Frequency, Mid
 REG_FRF_LSB   = 0x08 # RF Carrier Frequency, LSB

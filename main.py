@@ -14,8 +14,8 @@ gc.collect()
 import network
 sta_if = network.WLAN(network.STA_IF)
 sta_ap = network.WLAN(network.AP_IF)
-sta_if.active(False)
-sta_ap.active(False)
+sta_if.active(False) # off Wi-Fi interface
+sta_ap.active(False) # off Wi-Fi access point
 
 """
 if True:
@@ -102,14 +102,11 @@ t_space = 450  # ms
 
 if MODE == 0 or MODE == 3:
     DATA = Pin(16, Pin.OUT) # DIO2/DATA
-    #DCLK = Pin(16, Pin.OUT) # DIO1/DCLK
-    #DCLK.value(0)
+    #DCLK = Pin(0, Pin.IN)  # DIO1/DCLK
 
 def data(value=1):
     DATA.value(value)
     tr.led(value)
-    #DCLK.value(1)
-    #DCLK.value(0)
 
 def delay(ms):
     time.sleep_ms(ms)
