@@ -26,3 +26,6 @@
  + add ramp(), rx(), tx(), cad() methods
  * test continuius TX mode (DIO2/DATA + DIO1/DCLK) by morse beeper 
 
+2018.02.08
+ + add pllBW(bw) and fastHop(on) methods
+

@@ -531,7 +531,7 @@ class RADIO:
         self.writeReg(REG_FRF_MID, (freq_code >>  8) & 0xFF)
         self.writeReg(REG_FRF_LSB,  freq_code        & 0xFF)
         mode = self.readReg(REG_OP_MODE)
-        if self.freq < 600000000: # FIXME ~ 600 MHz ?
+        if self.freq < 600000000: # LF <= 525 < _600_ < 779 <= HF [MHz]
             mode |=  MODE_LOW_FREQ_MODE_ON # LF
         else:
             mode &= ~MODE_LOW_FREQ_MODE_ON # HF
@@ -778,6 +778,22 @@ class RADIO:
             self.writeReg(REG_IMAGE_CAL, reg)
             while (self.readReg(REG_IMAGE_CAL) & 0x20): # `ImageCalRunning`
                 pass # FIXME: check timeout
+
+
+    def pllBW(bw=3):
+        """set PLL bandwidth 0=75, 1=150, 2=225, 3=300 kHz (LoRa/FSK/OOK)"""
+        bw = min(max(bw, 0), 3)
+        reg = self.readReg(REG_PLL)
+        reg = (reg & 0x3F) | (bw << 6)
+        self.writeReg(REG_PLL)
+
+
+    def fastHop(on=True):
+        """on/off fast frequency PLL hopping (FSK/OOK)"""
+        if self._mode:
+            reg = self.readReg(REG_PLL_HOP)
+            reg = reg | 0x80 if on else reg & 0x7F # `FastHopOn`
+            self.writeReg(REG_PLL_HOP)
 
 
     #def aquire_lock(self, lock=False):        
