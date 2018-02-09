@@ -48,24 +48,25 @@ $ esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash -z 0x1000 firmware.bin
 
 ## Connect LoRa module to ESP8266/ESP32
 
-|   GPIO   | DOIT ESP32 | NodeMCU v3 |   Signal    | SX1278 (color)  |
-| -------- | ---------- | ---------- | ----------- | --------------- |
-|     0    |    -       |     D3     |             |                 |
-|     2    |    D2      |     D4     |  Blue LED   |                 |
-|     4    |    D4      |     D2     |    IRQ      | DIO0  (yellow)  |
-|     5    |    D5      |     D1     | HARD RESET  | RESET (magenta) |
-|     9    |    -       |     S2?    |             |                 |
-|    10    |    -       |   S3/SK?   |             |                 |
-|    12    |    D12     |     D6     |    MISO     | MISO  (blue)    |
-|    13    |    D13     |     D7     |    MOSI     | MOSI  (green)   |
-|    14    |    D14     |     D5     |    SCK      | SCK   (white)   |
-|    15    |    D15     |     D8     |    CS       | NSS   (grey)    |
-|    16    |    -       |     D0     |    DATA*    | DIO2* (brown)   |
-|          |            |            |    DCLK*    | DIO1* (orange)  |
-|          |    3V3     |     3V     |    3.3V     | 3.3V  (red)     |
-|          |    GND     |     G      |    GND      | GND   (black)   |
+|   GPIO   | DOIT ESP32 | NodeMCU v3 |   Signal    |  SX1278 (color)  |
+| -------- | ---------- | ---------- | ----------- | ---------------- |
+|     0    |    -       |     D3     |             |                  |
+|     2    |    D2      |     D4     |  Blue LED   |                  |
+|     4    |    D4      |     D2     |    IRQ      | DIO0   (yellow)  |
+|     5    |    D5      |     D1     | HARD RESET  | RESET  (magenta) |
+|     9    |    -       |     S2?    |             |                  |
+|    10    |    -       |   S3/SK?   |             |                  |
+|    12    |    D12     |     D6     |    MISO     | MISO   (blue)    |
+|    13    |    D13     |     D7     |    MOSI     | MOSI   (green)   |
+|    14    |    D14     |     D5     |    SCK      | SCK    (white)   |
+|    15    |    D15     |     D8     |    CS       | NSS    (grey)    |
+|    16    |    RX2     |     D0     |    DATA*    | DIO2*  (brown)   |
+|    -     |    -       |     -      |    DCLK**   | DIO1** (orange)  |
+|          |    3V3     |     3V     |    3.3V     | 3.3V   (red)     |
+|          |    GND     |     G      |    GND      | GND    (black)   |
 
-Note: DIO2(DATA) is optional and may used in continuous FSK/OOK mode
+Note (*):  DIO2(DATA) is optional and may used in continuous FSK/OOK mode
+Note (**): DIO1(DCLK) unused
 
 ## Build `mpy-cross`
 
