@@ -453,7 +453,7 @@ class RADIO:
         # config RF frequency
         self.setFrequency(self._pars['freq_kHz'], self._pars['freq_Hz'])
 
-        # set LNA boost `LnaBoostHf`->3
+        # set LNA boost: `LnaBoostHf`->3 (Boost on, 150% LNA current)
         self.writeReg(REG_LNA, self.readReg(REG_LNA) | 0x03) 
             
         # enable/disable CRC
