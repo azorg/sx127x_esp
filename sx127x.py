@@ -225,7 +225,7 @@ RX_BW_TABLE = (
   (0b00, 1, 250.0))
 
 
-def get_rx_bw(bw=10.4):
+def getRxBw(bw=10.4):
     for m, e, v in RX_BW_TABLE:
         if bw <= v:
             return m, e 
@@ -237,7 +237,7 @@ class RADIO:
                  mode = LORA, # 0 - LoRa, 1 - FSK, 2 - OOK
                  pars = {'freq_kHz':         433000, # kHz
                          'freq_Hz':          0,      # Hz
-                         'power':            10,     # dBm
+                         'power':            10,     # 2...17 dBm
                          'crc':              True,   # CRC on/off
                          # LoRa mode:
                          'bw':               125,    # BW: 7.8...500 kHz
@@ -488,13 +488,13 @@ class RADIO:
         else:
             # set FSK/OOK options
             self.continuous(False) # packet mode by default
-            self.bitrate(  self._pars["bitrate"])
-            self.fdev(     self._pars["fdev"])
-            self.rxBW(     self._pars["rx_bw"])
-            self.afcBW(    self._pars["afc_bw"])
-            self.fixedLen( self._pars["fixed"])
+            self.setBitrate(  self._pars["bitrate"])
+            self.setFdev(     self._pars["fdev"])
+            self.setRxBW(     self._pars["rx_bw"])
+            self.setAfcBW(    self._pars["afc_bw"])
+            self.setFixedLen( self._pars["fixed"])
             self.enableAFC(self._pars["afc"])
-            self.dcFree(   self._pars["dcfree"])
+            self.setDcFree(   self._pars["dcfree"])
             
             self.writeReg(REG_RSSI_TRESH, 0xFF) # default
             self.writeReg(REG_PREAMBLE_LSB, 8) # 3 by default
@@ -538,10 +538,10 @@ class RADIO:
         self.writeReg(REG_OP_MODE, mode)
 
 
-    def setPower(self, level, boost=True, MaxPower=7):
-        """set TX Power level and boost"""
+    def setPower(self, level, PA_BOOST=True, MaxPower=7):
+        """set TX Power level 2...17 dBm, select PA_BOOST pin"""
         MaxPower = min(max(MaxPower, 0), 7)
-        if boost:
+        if PA_BOOST:
             # Select PA BOOST pin: Pout is limited to ~17..20 dBm
             # Pout = 17 - (15 - OutputPower) dBm
             OutputPower = min(max(level - 2, 0), 15)
@@ -554,15 +554,15 @@ class RADIO:
             self.writeReg(REG_PA_CONFIG, (MaxPower << 4) | OutputPower)
             
     
-    def setHighPower(self, hp=True):
+    def setHighPower(self, on=True):
         """set high power on PA_BOOST up to +20 dBm"""
-        if hp: # +3dB
+        if on: # +3dB
             self.writeReg(REG_PA_DAC, 0x87) # power on PA_BOOST pin up to +20 dBm
         else:
             self.writeReg(REG_PA_DAC, 0x84) # default mode
 
-    
-    def ramp(self, shaping=0, ramp=0x09):
+
+    def setRamp(self, shaping=0, ramp=0x09):
         """set modulation shaping code 0..3 (FSK/OOK) and PA rise/fall time code 0..15 (FSK/Lora)"""
         shaping = min(max(shaping, 0), 3)
         ramp    = min(max(ramp,    0), 15)
@@ -571,6 +571,17 @@ class RADIO:
         self.writeReg(REG_PA_RAMP, reg)
 
 
+    def setOCP(self, trim_mA=100., on=True):
+        """set trimming of OCP current (45...240 mA)"""
+        if trim <= 120.:
+            OcpTrim = round((trim_mA - 45.) / 5.)
+        else:
+            OcpTrim = round((trim_mA + 30.) / 10.)
+        OcpTrim = min(max(OcpTrim, 0), 27)
+        if on: OcpTrim |= 0x20 # OcpOn
+        self.writeReg(REG_OCP, 0x84) # default mode
+
+    
     def enableCRC(self, crc=True, crcAutoClearOff=False):
         """enable/disable CRC (and set CrcAutoClearOff in FSK/OOK mode)"""
         self._crc = crc
@@ -590,7 +601,7 @@ class RADIO:
         return (self.readReg(REG_LNA) >> 5) & 0x07 # `LnaGain`
 
 
-    def rssi(self):
+    def getRSSI(self):
         """get RSSI [dB] (LoRa)"""
         if self._mode == 0: # LoRa mode
             return self.readReg(REG_PKT_RSSI_VALUE) - \
@@ -599,7 +610,7 @@ class RADIO:
             return -0.5 * self.readReg(REG_RSSI_VALUE)
 
 
-    def snr(self):
+    def getSNR(self):
         """get SNR [dB]"""
         if self._mode == 0: # LoRa mode
             return (self.readReg(REG_PKT_SNR_VALUE)) * 0.25
@@ -607,7 +618,7 @@ class RADIO:
             return self.readReg(REG_RSSI_VALUE) * 0.5 # FIXME
         
 
-    def irqFlags(self):
+    def getIrqFlags(self):
         """get IRQ flags for debug"""
         if self._mode == 0: # LoRa mode
             irqFlags = self.readReg(REG_IRQ_FLAGS)
@@ -698,7 +709,7 @@ class RADIO:
                 self.writeReg(REG_MODEM_CONFIG_1, config)
        
         
-    def bitrate(self, bitrate=4800., frac=None):
+    def setBitrate(self, bitrate=4800., frac=None):
         """set bitrate [bit/s] (FSK/OOK)"""
         if self._mode:
             if bitrate:
@@ -709,7 +720,7 @@ class RADIO:
                     self.writeReg(REG_BITRATE_FRAC, frac)
 
 
-    def fdev(self, fdev=5000.):
+    def setFdev(self, fdev=5000.):
         """set frequency deviation (FSK)"""
         if self._mode:
             if fdev:
@@ -719,19 +730,19 @@ class RADIO:
                 self.writeReg(REG_FDEV_LSB,  code       & 0xFF)
 
 
-    def rxBW(self, bw=10.4):
+    def setRxBW(self, bw=10.4):
         """set RX BW [kHz] (FSK/OOK)"""
         if self._mode:
             if bw:
-                m, e = get_rx_bw(bw)
+                m, e = getRxBw(bw)
                 self.writeReg(REG_RX_BW, (m << 3) | e)
 
 
-    def afcBW(self, bw=2.6):
+    def setAfcBW(self, bw=2.6):
         """set AFC BW [kHz] (FSK/OOK)"""
         if self._mode:
             if bw:
-                m, e = get_rx_bw(bw)
+                m, e = getRxBw(bw)
                 self.writeReg(REG_AFC_BW, (m << 3) | e)
 
 
@@ -744,7 +755,7 @@ class RADIO:
             self.writeReg(REG_RX_CONFIG, reg)
 
 
-    def fixedLen(self, fixed=False):
+    def setFixedLen(self, fixed=False):
         """set Fixed or Variable packet mode (FSK/OOK)"""
         if self._mode:
             reg = self.readReg(REG_PACKET_CONFIG_1)
@@ -753,7 +764,7 @@ class RADIO:
             self.writeReg(REG_PACKET_CONFIG_1, reg)
 
 
-    def dcFree(self, mode=0):
+    def setDcFree(self, mode=0):
         """set DcFree mode: 0=Off, 1=Manchester, 2=Whitening (FSK/OOK)"""
         if self._mode:
             reg = self.readReg(REG_PACKET_CONFIG_1)
@@ -780,7 +791,7 @@ class RADIO:
                 pass # FIXME: check timeout
 
 
-    def pllBW(self, bw=3):
+    def setPllBW(self, bw=3):
         """set PLL bandwidth 0=75, 1=150, 2=225, 3=300 kHz (LoRa/FSK/OOK)"""
         bw = min(max(bw, 0), 3)
         reg = self.readReg(REG_PLL)
@@ -788,7 +799,7 @@ class RADIO:
         self.writeReg(REG_PLL, reg)
 
 
-    def fastHop(self, on=True):
+    def setFastHop(self, on=True):
         """on/off fast frequency PLL hopping (FSK/OOK)"""
         if self._mode:
             reg = self.readReg(REG_PLL_HOP)

@@ -3,8 +3,8 @@
 
 2018.01.13
  * first test
- * exchange MSB and LSB of RF frequency
- + add setLDR() - set LowDataRateOptimize bit
+ * exchange MSB and LSB of RF frequency (fix bug)
+ + add setLDRO() - set LowDataRateOptimize bit
 
 2018.01.14
  * add address of some SX127x registers
@@ -23,9 +23,12 @@
  + add port of ESP32 (tested)
  + test and debug CRC on/off
  + first test TX/RX in OOK packet mode
- + add ramp(), rx(), tx(), cad() methods
+ + add setRamp(), rx(), tx(), cad() methods
  * test continuius TX mode (DIO2/DATA + DIO1/DCLK) by morse beeper 
 
 2018.02.08
- + add pllBW(bw) and fastHop(on) methods
+ + add setPllBW(bw) and setFastHop(on) methods
+
+2018.02.09
+ + add setOcp() method
 
