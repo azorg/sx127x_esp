@@ -579,7 +579,7 @@ class RADIO:
         reg = self.readReg(REG_LNA)
         if LnaBoost:
             reg |= 0x03 # set `LnaBoostHf` to 3 (boost on, 150% LNA current)
-        else
+        else:
             reg &= ~0x03 # set `LnaBoostHf` to 0 (default LNA current)
         self.writeReg(REG_LNA, reg)
 
