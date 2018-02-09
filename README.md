@@ -66,6 +66,7 @@ $ esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash -z 0x1000 firmware.bin
 |          |    GND     |     G      |    GND      | GND    (black)   |
 
 Note (*):  DIO2(DATA) is optional and may used in continuous FSK/OOK mode
+
 Note (**): DIO1(DCLK) unused
 
 ## Build `mpy-cross`
