@@ -26,7 +26,7 @@ REG_FRF_MID   = 0x07 # RF Carrier Frequency, Mid
 REG_FRF_LSB   = 0x08 # RF Carrier Frequency, LSB
 REG_PA_CONFIG = 0x09 # PA selection and Output power control
 REG_PA_RAMP   = 0x0A # Controll of PA ramp time, low phase noise PLL
-REG_OCP       = 0x0B # Over Current Protection control
+REG_OCP       = 0x0B # Over Current Protection (OCP) control 
 REG_LNA       = 0x0C # LNA settings
 
 REG_DIO_MAPPING_1 = 0x40 # Mapping of pins DIO0 to DIO3
@@ -454,7 +454,7 @@ class RADIO:
         self.setFrequency(self._pars['freq_kHz'], self._pars['freq_Hz'])
 
         # set LNA boost: `LnaBoostHf`->3 (Boost on, 150% LNA current)
-        self.writeReg(REG_LNA, self.readReg(REG_LNA) | 0x03) 
+        self.setLnaBoost(True)
             
         # enable/disable CRC
         self.enableCRC(self._pars["crc"])
@@ -522,7 +522,7 @@ class RADIO:
 
         self.standby() 
 
-        
+
     def setFrequency(self, freq_kHz, freq_Hz=0):
         """set RF frequency [kHz * 1000 + Hz]"""
         self.freq = int(freq_kHz) * 1000 + freq_Hz # kHz + Hz -> Hz
@@ -562,6 +562,28 @@ class RADIO:
             self.writeReg(REG_PA_DAC, 0x84) # default mode
 
 
+    def setOCP(self, trim_mA=100., on=True):
+        """set trimming of OCP current (45...240 mA)"""
+        if trim <= 120.:
+            OcpTrim = round((trim_mA - 45.) / 5.)
+        else:
+            OcpTrim = round((trim_mA + 30.) / 10.)
+        OcpTrim = min(max(OcpTrim, 0), 27)
+        if on:
+            OcpTrim |= 0x20 # `OcpOn`
+        self.writeReg(REG_OCP, OcpTrim)
+
+    
+    def setLnaBoost(self, LnaBoost=True):
+        """set LNA boost on/off (only for high frequency band)"""
+        reg = self.readReg(REG_LNA)
+        if LnaBoost:
+            reg |= 0x03 # set `LnaBoostHf` to 3 (boost on, 150% LNA current)
+        else
+            reg &= ~0x03 # set `LnaBoostHf` to 0 (default LNA current)
+        self.writeReg(REG_LNA, reg)
+
+        
     def setRamp(self, shaping=0, ramp=0x09):
         """set modulation shaping code 0..3 (FSK/OOK) and PA rise/fall time code 0..15 (FSK/Lora)"""
         shaping = min(max(shaping, 0), 3)
@@ -571,17 +593,6 @@ class RADIO:
         self.writeReg(REG_PA_RAMP, reg)
 
 
-    def setOCP(self, trim_mA=100., on=True):
-        """set trimming of OCP current (45...240 mA)"""
-        if trim <= 120.:
-            OcpTrim = round((trim_mA - 45.) / 5.)
-        else:
-            OcpTrim = round((trim_mA + 30.) / 10.)
-        OcpTrim = min(max(OcpTrim, 0), 27)
-        if on: OcpTrim |= 0x20 # OcpOn
-        self.writeReg(REG_OCP, 0x84) # default mode
-
-    
     def enableCRC(self, crc=True, crcAutoClearOff=False):
         """enable/disable CRC (and set CrcAutoClearOff in FSK/OOK mode)"""
         self._crc = crc
