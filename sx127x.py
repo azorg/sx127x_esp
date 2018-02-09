@@ -525,13 +525,13 @@ class RADIO:
 
     def setFrequency(self, freq_kHz, freq_Hz=0):
         """set RF frequency [kHz * 1000 + Hz]"""
-        self.freq = int(freq_kHz) * 1000 + freq_Hz # kHz + Hz -> Hz
-        freq_code = int(round(self.freq / FSTEP))
+        self._freq = int(freq_kHz) * 1000 + freq_Hz # kHz + Hz -> Hz
+        freq_code = int(round(self._freq / FSTEP))
         self.writeReg(REG_FRF_MSB, (freq_code >> 16) & 0xFF)
         self.writeReg(REG_FRF_MID, (freq_code >>  8) & 0xFF)
         self.writeReg(REG_FRF_LSB,  freq_code        & 0xFF)
         mode = self.readReg(REG_OP_MODE)
-        if self.freq < 600000000: # LF <= 525 < _600_ < 779 <= HF [MHz]
+        if self._freq < 600000000: # LF <= 525 < _600_ < 779 <= HF [MHz]
             mode |=  MODE_LOW_FREQ_MODE_ON # LF
         else:
             mode &= ~MODE_LOW_FREQ_MODE_ON # HF
@@ -613,10 +613,10 @@ class RADIO:
 
 
     def getRSSI(self):
-        """get RSSI [dB] (LoRa)"""
+        """get RSSI [dB]"""
         if self._mode == 0: # LoRa mode
             return self.readReg(REG_PKT_RSSI_VALUE) - \
-                   (164 if self.freq < 868000000 else 157)
+                   (164 if self._freq < 600000000 else 157)
         else: # FSK/OOK mode
             return -0.5 * self.readReg(REG_RSSI_VALUE)
 
@@ -626,7 +626,7 @@ class RADIO:
         if self._mode == 0: # LoRa mode
             return (self.readReg(REG_PKT_SNR_VALUE)) * 0.25
         else: # FSK/OOK mode
-            return self.readReg(REG_RSSI_VALUE) * 0.5 # FIXME
+            return 0.
         
 
     def getIrqFlags(self):
