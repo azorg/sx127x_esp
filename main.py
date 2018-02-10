@@ -49,7 +49,7 @@ def on_receive(tr, payload, crcOk):
 #tr = sx127x.RADIO(mode=sx127x.FSK)
 tr = sx127x.RADIO(mode=sx127x.OOK)
 
-tr.setFrequency(433000,000) # kHz, Hz
+tr.setFrequency(434000,000) # kHz, Hz
 tr.setPower(10, True)       # power +10dBm (RFO pin if False or PA_BOOST pin if True)
 #tr.setHighPower(True)      # add +3 dB (up to +20 dBm power on PA_BOOST pin)
 #tr.setOcp(180, True)       # set OCP trimming (> 120 mA if High Power is on)

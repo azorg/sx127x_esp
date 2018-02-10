@@ -235,7 +235,7 @@ def getRxBw(bw=10.4):
 class RADIO:
     def __init__(self,
                  mode = LORA, # 0 - LoRa, 1 - FSK, 2 - OOK
-                 pars = {'freq_kHz':         433000, # kHz
+                 pars = {'freq_kHz':         434000, # kHz
                          'freq_Hz':          0,      # Hz
                          'power':            10,     # 2...17 dBm
                          'crc':              True,   # CRC on/off
