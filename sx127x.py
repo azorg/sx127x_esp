@@ -564,7 +564,7 @@ class RADIO:
 
     def setOCP(self, trim_mA=100., on=True):
         """set trimming of OCP current (45...240 mA)"""
-        if trim <= 120.:
+        if trim_mA <= 120.:
             OcpTrim = round((trim_mA - 45.) / 5.)
         else:
             OcpTrim = round((trim_mA + 30.) / 10.)

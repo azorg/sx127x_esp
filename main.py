@@ -46,13 +46,13 @@ def on_receive(tr, payload, crcOk):
 
 # init SX127x RF module
 #tr = sx127x.RADIO(mode=sx127x.LORA)
-#tr = sx127x.RADIO(mode=sx127x.FSK)
-tr = sx127x.RADIO(mode=sx127x.OOK)
+tr = sx127x.RADIO(mode=sx127x.FSK)
+#tr = sx127x.RADIO(mode=sx127x.OOK)
 
 tr.setFrequency(434000,000) # kHz, Hz
-tr.setPower(10, True)       # power +10dBm (RFO pin if False or PA_BOOST pin if True)
-#tr.setHighPower(True)      # add +3 dB (up to +20 dBm power on PA_BOOST pin)
-#tr.setOcp(180, True)       # set OCP trimming (> 120 mA if High Power is on)
+tr.setPower(17, True)       # power +17dBm (RFO pin if False or PA_BOOST pin if True)
+tr.setHighPower(True)       # add +3 dB (up to +20 dBm power on PA_BOOST pin)
+tr.setOCP(180, True)        # set OCP trimming (> 120 mA if High Power is on)
 tr.enableCRC(True, True)    # CRC=on (CrcAutoClearOff=on in FSK/OOK mode)
 
 if tr.isLora(): # LoRa mode
@@ -77,8 +77,8 @@ tr.collect()
 # LOOK HERE and CHANGE!!!
 #MODE = 0 # do nothing
 #MODE = 1 # transmitter
-#MODE = 2 # reseiver
-MODE = 3 # morse transmitter in continuous mode
+MODE = 2 # reseiver
+#MODE = 3 # morse transmitter in continuous mode
 
 if MODE == 1:
     # transmitter
