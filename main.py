@@ -17,8 +17,14 @@ sta_ap = network.WLAN(network.AP_IF)
 sta_if.active(False) # off Wi-Fi interface
 sta_ap.active(False) # off Wi-Fi access point
 
-"""
-if True:
+wifi = 0 # 0 - off, 1 - create AP, 2 - connect to AP
+
+if wifi == 0:
+    # Wi-Fi off
+    sta_if.active(False)
+    sta_ap.active(False)
+
+elif wifi == 1:
     # create AP
     sta_if.active(False)
     sta_ap.active(True)
@@ -26,14 +32,14 @@ if True:
     # IP address, netmask, gateway, DNS
     sta_ap.ifconfig(['192.168.1.1', '255.255.255.0', '192.168.1.1', '8.8.8.8'])
 
-else:
+elif wifi == 2:
     # connnect to AP
     sta_ap.active(False)
     sta_if.active(True)
     sta_if.connect('veonet', '********')
     sta_if.ifconfig(['192.168.0.13', '255.255.255.0', '192.168.0.254', '192.168.0.254'])
     #sta_if.ifconfig()
-"""
+
 
 def on_receive(tr, payload, crcOk):
     tr.blink()
@@ -46,13 +52,13 @@ def on_receive(tr, payload, crcOk):
 
 # init SX127x RF module
 #tr = sx127x.RADIO(mode=sx127x.LORA)
-tr = sx127x.RADIO(mode=sx127x.FSK)
-#tr = sx127x.RADIO(mode=sx127x.OOK)
+#tr = sx127x.RADIO(mode=sx127x.FSK)
+tr = sx127x.RADIO(mode=sx127x.OOK)
 
 tr.setFrequency(434000,000) # kHz, Hz
 tr.setPower(17, True)       # power +17dBm (RFO pin if False or PA_BOOST pin if True)
 tr.setHighPower(True)       # add +3 dB (up to +20 dBm power on PA_BOOST pin)
-tr.setOCP(180, True)        # set OCP trimming (> 120 mA if High Power is on)
+tr.setOCP(240, True)        # set OCP trimming (> 120 mA if High Power is on)
 tr.enableCRC(True, True)    # CRC=on (CrcAutoClearOff=on in FSK/OOK mode)
 
 if tr.isLora(): # LoRa mode
@@ -77,8 +83,8 @@ tr.collect()
 # LOOK HERE and CHANGE!!!
 #MODE = 0 # do nothing
 #MODE = 1 # transmitter
-MODE = 2 # reseiver
-#MODE = 3 # morse transmitter in continuous mode
+#MODE = 2 # reseiver
+MODE = 3 # morse transmitter in continuous mode
 
 if MODE == 1:
     # transmitter
@@ -95,7 +101,7 @@ elif MODE == 2:
 
 
 msg = "-- --- ..." # "MOS"
-pause   = 1500 # ms
+pause   = 2000 # ms
 t_pause = 150  # ms
 t_dot   = 150  # ms
 t_line  = 450  # ms
