@@ -69,7 +69,7 @@ REG_FEI_LSB         = 0x1E # Value of the calculated frequency error, LSB
 REG_PREAMBLE_DETECT = 0x1F # Settings of preamble Detector
 REG_RX_TIMEOUT_1    = 0x20 # Timeout Rx request and RSSI
 REG_RX_TIMEOUT_2    = 0x21 # Timeout RSSI and PayloadReady
-REG_RX_TIMEOUT_2    = 0x22 # Timeout RSSI and SyncAddress
+REG_RX_TIMEOUT_3    = 0x22 # Timeout RSSI and SyncAddress
 REG_RX_DELAY        = 0x23 # Delay between Rx cycles
 REG_OSC             = 0x24 # RC Oscillators Settings, CLK-OUT frequency
 REG_PREAMBLE_L_MSB  = 0x25 # Preampbe length, MSB 
@@ -163,7 +163,7 @@ IRQ_RX_DONE           = 0x40 # `RxDone`
 IRQ_PAYLOAD_CRC_ERROR = 0x20 # `PayloadCrcError`
 
 # REG_IRQn_FLAGS (`RegIrqFlagsN` in datasheet) bits (FSK/OOK)
-IRQ1_RX_READY    = 0x50 # bit 6: `RxReady`
+IRQ1_RX_READY    = 0x40 # bit 6: `RxReady`
 IRQ1_TX_READY    = 0x20 # bit 5: `TxReady`
 
 IRQ2_FIFO_FULL     = 0x80 # bit 7: `FifoFull`
@@ -186,9 +186,9 @@ FIFO_TX_BASE_ADDR = 0x00 # 0x80 FIXME
 FIFO_RX_BASE_ADDR = 0x00 
 
 # Constants
-FXOSC = 32e6 # 32 MHz
-FSTEP = FXOSC / 2**19 # ~61.03515625 Hz
-MAX_PKT_LENGTH = 255 # maximum packet length [bytes]
+FXOSC = 32e6          # 32 MHz
+FSTEP = FXOSC / 2**19 # 61.03515625 Hz
+MAX_PKT_LENGTH = 255  # maximum packet length [bytes]
 
 # RADIO class mode
 LORA = 0
