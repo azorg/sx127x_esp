@@ -104,29 +104,29 @@ REG_PLL_HOP      = 0x44 # Control the fast frequency hopping mode
 REG_BITRATE_FRAC = 0x5D # Fraction part in the Bit Rate division ratio
 
 # LoRaTM mode registers
-REG_FIFO_ADDR_PTR        = 0x0D
-REG_FIFO_TX_BASE_ADDR    = 0x0E
-REG_FIFO_RX_BASE_ADDR    = 0x0F
-REG_FIFO_RX_CURRENT_ADDR = 0x10
-REG_FIFO_RX_BYTE_ADDR    = 0x25
+REG_FIFO_ADDR_PTR        = 0x0D # FIFO SPI pointer
+REG_FIFO_TX_BASE_ADDR    = 0x0E # Start Tx data
+REG_FIFO_RX_BASE_ADDR    = 0x0F # Start Rx data
+REG_FIFO_RX_CURRENT_ADDR = 0x10 # Start address of last packet received
+REG_FIFO_RX_BYTE_ADDR    = 0x25 # Address of last byte written in FIFO
 
-REG_IRQ_FLAGS_MASK = 0x11
-REG_IRQ_FLAGS      = 0x12
-REG_RX_NB_BYTES    = 0x13
-REG_PKT_RSSI_VALUE = 0x1A
-REG_PKT_SNR_VALUE  = 0x1B
-REG_MODEM_CONFIG_1 = 0x1D
-REG_MODEM_CONFIG_2 = 0x1E
-REG_PREAMBLE_MSB   = 0x20
-REG_PREAMBLE_LSB   = 0x21
-REG_PAYLOAD_LENGTH = 0x22
-REG_MODEM_CONFIG_3 = 0x26
-REG_RSSI_WIDEBAND  = 0x2C
+REG_IRQ_FLAGS_MASK = 0x11 # Optional IRQ flag mask
+REG_IRQ_FLAGS      = 0x12 # IRQ flags
+REG_RX_NB_BYTES    = 0x13 # Number of received bytes
+REG_PKT_RSSI_VALUE = 0x1A # RSSI of last packet
+REG_PKT_SNR_VALUE  = 0x1B # Current RSSI
+REG_MODEM_CONFIG_1 = 0x1D # Modem PHY config 1
+REG_MODEM_CONFIG_2 = 0x1E # Modem PHY config 2
+REG_PREAMBLE_MSB   = 0x20 # Size of preamble (MSB)
+REG_PREAMBLE_LSB   = 0x21 # Size of preamble (LSB)
+REG_PAYLOAD_LENGTH = 0x22 # LoRa TM payload length
+REG_MODEM_CONFIG_3 = 0x26 # Modem PHY config 3
+REG_RSSI_WIDEBAND  = 0x2C # Wideband RSSI meas-urement
 
-REG_DETECT_OPTIMIZE     = 0x31
-REG_INVERT_IQ           = 0x33
-REG_DETECTION_THRESHOLD = 0x37
-REG_SYNC_WORD           = 0x39
+REG_DETECT_OPTIMIZE     = 0x31 # LoRa detection Optimize for SF=6
+REG_INVERT_IQ           = 0x33 # Invert LoRa I and Q signals
+REG_DETECTION_THRESHOLD = 0x37 # LoRa detection threshold for SF=6
+REG_SYNC_WORD           = 0x39 # LoRa Sync Word
 
 # Modes, REG_OP_MODE register (look `RegOpMode` in datasheeet)
 # bits 2-0
@@ -173,7 +173,7 @@ IRQ2_FIFO_OVERRUN  = 0x10 # bit 4: `FifoOverrun`
 IRQ2_PACKET_SENT   = 0x08 # bit 3: `PacketSent`
 IRQ2_PAYLOAD_READY = 0x04 # bit 2: `PayloadReady`
 IRQ2_CRC_OK        = 0x02 # bit 1: `CrcOk`
-IRQ2_LOW_BAT       = 0x01 # bit 1: `LowBat`
+IRQ2_LOW_BAT       = 0x01 # bit 0: `LowBat`
 
 # REG_FIFO_THRESH (`RegFifoThresh` in datasheet) bits
 TX_START_FIFO_LEVEL   = 0x00 # bit 7: 0 -> `FifoLevel` (use `FifoThreshhold`)
