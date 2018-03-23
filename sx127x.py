@@ -422,13 +422,13 @@ class RADIO:
 
 
     def rx(self, on=True):
-        """on/off RX (continuous) mode (off=standby)"""
+        """on/off RX (continuous) mode (off = standby)"""
         if on: self.setMode(MODE_RX_CONTINUOUS)
         else:  self.setMode(MODE_STDBY)
 
 
     def cad(self, on=True):
-        """on/off CAD (LoRa) mode (off=standby)"""
+        """on/off CAD (LoRa) mode (off = standby)"""
         if self._mode == 0: # LoRa mode
             if on: self.setMode(MODE_CAD)
             else:  self.setMode(MODE_STDBY)
@@ -450,19 +450,21 @@ class RADIO:
         elif self._mode == 2: self.ook()  # OOK
         else:                 self.lora() # LoRa
         
-        # config RF frequency
+        # set RF frequency
         self.setFrequency(self._pars['freq_kHz'], self._pars['freq_Hz'])
 
         # set LNA boost: `LnaBoostHf`->3 (Boost on, 150% LNA current)
         self.setLnaBoost(True)
             
+        # set output power level
+        self.setPower(self._pars['power'])
+        
         # enable/disable CRC
         self.enableCRC(self._pars["crc"])
         
         if self._mode == 0:
             # set LoRaTM options
             self.setBW(self._pars['bw'])
-            self.setPower(self._pars['power'])
             self._implicitHeaderMode = None
             self.implicitHeaderMode(self._pars['implicit_header'])      
             sf = self._pars['sf']
@@ -542,7 +544,7 @@ class RADIO:
         """set TX Power level 2...17 dBm, select PA_BOOST pin"""
         MaxPower = min(max(MaxPower, 0), 7)
         if PA_BOOST:
-            # Select PA BOOST pin: Pout is limited to ~17..20 dBm
+            # Select PA_BOOST pin: Pout is limited to ~17..20 dBm
             # Pout = 17 - (15 - OutputPower) dBm
             OutputPower = min(max(level - 2, 0), 15)
             self.writeReg(REG_PA_CONFIG, PA_SELECT | OutputPower)
@@ -678,7 +680,7 @@ class RADIO:
                           (self.readReg(REG_MODEM_CONFIG_3) & ~0x08) | 0x08 if ldro else 0)
 
     def setBW(self, sbw):
-        """set signal Band With 7.8-500 kHz (LoRa)"""
+        """set signal Band Width 7.8-500 kHz (LoRa)"""
         if self._mode == 0:
             bw = len(BW_TABLE) - 1
             for i in range(bw + 1):
