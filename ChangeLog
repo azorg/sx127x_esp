@@ -35,3 +35,5 @@
 2018.02.10
  * set default RF frequency to 434 MHz
 
+2018.03.23
+ * fix getSNR()

@@ -618,7 +618,7 @@ class RADIO:
         """get RSSI [dB]"""
         if self._mode == 0: # LoRa mode
             return self.readReg(REG_PKT_RSSI_VALUE) - \
-                   (164 if self._freq < 600000000 else 157)
+                   (164. if self._freq < 600000000 else 157.)
         else: # FSK/OOK mode
             return -0.5 * self.readReg(REG_RSSI_VALUE)
 
@@ -626,7 +626,10 @@ class RADIO:
     def getSNR(self):
         """get SNR [dB]"""
         if self._mode == 0: # LoRa mode
-            return (self.readReg(REG_PKT_SNR_VALUE)) * 0.25
+            snr = self.readReg(REG_PKT_SNR_VALUE)
+            if snr & 0x80: # sign bit is 1
+                snr -= 256;
+            return snr * 0.25
         else: # FSK/OOK mode
             return 0.
         
