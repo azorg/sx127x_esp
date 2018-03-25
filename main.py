@@ -51,22 +51,23 @@ def on_receive(tr, payload, crcOk):
 
 
 # init SX127x RF module
-#tr = sx127x.RADIO(mode=sx127x.LORA)
+tr = sx127x.RADIO(mode=sx127x.LORA)
 #tr = sx127x.RADIO(mode=sx127x.FSK)
-tr = sx127x.RADIO(mode=sx127x.OOK)
+#tr = sx127x.RADIO(mode=sx127x.OOK)
 
 tr.setFrequency(434000,000) # kHz, Hz
 tr.setPower(17, True)       # power +17dBm (RFO pin if False or PA_BOOST pin if True)
-tr.setHighPower(True)       # add +3 dB (up to +20 dBm power on PA_BOOST pin)
-tr.setOCP(240, True)        # set OCP trimming (> 120 mA if High Power is on)
+tr.setHighPower(False)      # add +3 dB (up to +20 dBm power on PA_BOOST pin)
+tr.setOCP(230, True)        # set OCP trimming (> 120 mA if High Power is on)
 tr.enableCRC(True, True)    # CRC=on (CrcAutoClearOff=on in FSK/OOK mode)
+tr.setPllBW(1)              #  0=75, 1=150, 2=225, 3=300 kHz (LoRa/FSK/OOK)
 
 if tr.isLora(): # LoRa mode
-    tr.setBW(125.)    # BW: 7.8...500 kHz
-    tr.setSF(10)      # SF: 6...12
-    tr.setLDRO(False) # Low Datarate Optimize
+    tr.setBW(250.)    # BW: 7.8...500 kHz
     tr.setCR(5)       # CR: 5..8
-    tr.setPreamble(8) # 6..65535 (8 by default)
+    tr.setSF(7)       # SF: 6...12
+    tr.setLDRO(False) # Low Datarate Optimize
+    tr.setPreamble(6) # 6..65535 (8 by default)
     tr.setSW(0x12)    # SW allways 0x12
 
 else: # FSK/OOK mode
@@ -74,17 +75,17 @@ else: # FSK/OOK mode
     tr.setFdev(5000.)      # frequency deviation [Hz] 
     tr.setRxBW(10.4)       # 2.6...250 kHz
     tr.setAfcBW(2.6)       # 2.6...250 kHz
+    tr.enableAFC(True)     # AFC on/off
     tr.setFixedLen(False)  # fixed packet size or variable
-    tr.enableAFC(False)    # AFC on/off
-    tr.setDcFree(2)        # 0=Off, 1=Manchester, 2=Whitening
+    tr.setDcFree(0)        # 0=Off, 1=Manchester, 2=Whitening
 
 tr.collect()
 
 # LOOK HERE and CHANGE!!!
 #MODE = 0 # do nothing
-#MODE = 1 # transmitter
-#MODE = 2 # reseiver
-MODE = 3 # morse transmitter in continuous mode
+MODE = 1 # transmitter
+#MODE = 2 # receiver
+#MODE = 3 # morse transmitter in continuous mode
 
 if MODE == 1:
     # transmitter

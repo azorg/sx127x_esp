@@ -718,10 +718,11 @@ class RADIO:
     def implicitHeaderMode(self, implicitHeaderMode=False):
         """set implicitHeaderMode (LoRa)"""
         if self._mode == 0:
-            if self._implicitHeaderMode != implicitHeaderMode:  # set value only if different.
+            if self._implicitHeaderMode != implicitHeaderMode: # set value only if different
                 self._implicitHeaderMode = implicitHeaderMode
                 modem_config_1 = self.readReg(REG_MODEM_CONFIG_1)
-                config = modem_config_1 | 0x01 if implicitHeaderMode else modem_config_1 & 0xfe
+                config = modem_config_1 | 0x01 if implicitHeaderMode else \
+                         modem_config_1 & 0xFE
                 self.writeReg(REG_MODEM_CONFIG_1, config)
        
         
@@ -857,7 +858,7 @@ class RADIO:
             # update length        
             self.writeReg(REG_PAYLOAD_LENGTH, currentLength + size)
 
-            # end packet
+            # start TX packet
             self.setMode(MODE_TX) # put in TX mode
 
             # wait for TX done, standby automatically on TX_DONE
@@ -891,7 +892,7 @@ class RADIO:
             for i in range(size):
                 self.writeReg(REG_FIFO, buf[i])
             
-            # start TX mode
+            # start TX packet
             self.setMode(MODE_TX)
             
             # wait `TxRaedy` (bit 5 in `RegIrqFlags1`)
@@ -947,7 +948,7 @@ class RADIO:
                 #self.aquire_lock(False)
                 return # `RxDone` is not set
 
-            #print("DIO0 interrupt in LoRa mode by `RxDone` (RegIrqFlags=0x%02X)" % irqFlags)
+            print("DIO0 interrupt in LoRa mode by `RxDone` (RegIrqFlags=0x%02X)" % irqFlags)
 
             # check `PayloadCrcError` bit
             crcOk = not bool (irqFlags & IRQ_PAYLOAD_CRC_ERROR)
