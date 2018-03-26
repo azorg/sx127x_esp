@@ -466,7 +466,7 @@ class RADIO:
             # set LoRaTM options
             self.setBW(self._pars['bw'])
             self._implicitHeaderMode = None
-            self.implicitHeaderMode(self._pars['implicit_header'])      
+            self.setImplicitHeaderMode(self._pars['implicit_header'])
             sf = self._pars['sf']
             self.setSF(sf)
             ldro = self._pars['ldro']
@@ -494,6 +494,7 @@ class RADIO:
             self.setFdev(     self._pars["fdev"])
             self.setRxBW(     self._pars["rx_bw"])
             self.setAfcBW(    self._pars["afc_bw"])
+            self._fixedLen = None
             self.setFixedLen( self._pars["fixed"])
             self.enableAFC(self._pars["afc"])
             self.setDcFree(   self._pars["dcfree"])
@@ -715,8 +716,8 @@ class RADIO:
             self.writeReg(REG_SYNC_WORD, sw)
          
     
-    def implicitHeaderMode(self, implicitHeaderMode=True):
-        """set implicitHeaderMode (LoRa)"""
+    def setImplicitHeaderMode(self, implicitHeaderMode=True):
+        """set ImplicitHeaderModeOn (LoRa)"""
         if self._mode == 0:
             if self._implicitHeaderMode != implicitHeaderMode: # set value only if different
                 self._implicitHeaderMode = implicitHeaderMode
@@ -772,13 +773,15 @@ class RADIO:
             self.writeReg(REG_RX_CONFIG, reg)
 
 
-    def setFixedLen(self, fixed=False):
+    def setFixedLen(self, fixed=True):
         """set Fixed or Variable packet mode (FSK/OOK)"""
         if self._mode:
-            reg = self.readReg(REG_PACKET_CONFIG_1)
-            if fixed: reg &= ~0x80 # bit 7: PacketFormar -> 0 (fixed size)
-            else:     reg |=  0x80 # bit 7: PacketFormat -> 1 (variable size)
-            self.writeReg(REG_PACKET_CONFIG_1, reg)
+            if self._fixedLen != fixed: # set value only if different
+                self._fixedLen = fixed
+                reg = self.readReg(REG_PACKET_CONFIG_1)
+                if fixed: reg &= ~0x80 # bit 7: PacketFormat -> 0 (fixed size)
+                else:     reg |=  0x80 # bit 7: PacketFormat -> 1 (variable size)
+                self.writeReg(REG_PACKET_CONFIG_1, reg)
 
 
     def setDcFree(self, mode=0):
@@ -919,14 +922,15 @@ class RADIO:
 
     def receive(self, size=0):
         """go to RX mode; wait callback by interrupt (LoRa/FSK/OOK)"""
+        size = min(size, MAX_PKT_LENGTH)
         if self._mode == 0: # LoRa mode
-            self.implicitHeaderMode(size > 0)
+            self.setImplicitHeaderMode(size > 0)
             if size > 0:
-                size = min(size, MAX_PKT_LENGTH)
-                self.writeReg(REG_PAYLOAD_LENGTH, size)
+                self.writeReg(REG_PAYLOAD_LENGTH, size) # implicit header
         else: # FSK/OOK mode
-            if (self.readReg(REG_PACKET_CONFIG_1) & 0x80) == 0: # check `PacketFormat`
-                self.writeReg(REG_PAYLOAD_LEN, max(1, size)) # fixed length
+            self.setFixedLen(size > 0)
+            if size > 0:
+                self.writeReg(REG_PAYLOAD_LEN, size) # fixed length
         self.setMode(MODE_RX_CONTINUOUS)
                  
                  
