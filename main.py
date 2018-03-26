@@ -44,22 +44,25 @@ elif wifi == 2:
 def on_receive(tr, payload, crcOk):
     tr.blink()
     payload_string = payload.decode()
+    #payload_string = str(payload)
     rssi = tr.getRSSI()
     snr  = tr.getSNR()
-    print("*** Received message ***\n{}".format(payload_string))
-    print("crcOk={}, RSSI={}, SNR={}\n".format(crcOk, rssi, snr))
+    print("*** Received message:")
+    print(payload_string)
+    print("^^^ CrcOk={}, size={}, RSSI={}, SNR={}\n".format(\
+           crcOk, len(payload), rssi, snr))
 
 
 # init SX127x RF module
-tr = sx127x.RADIO(mode=sx127x.LORA)
-#tr = sx127x.RADIO(mode=sx127x.FSK)
+#tr = sx127x.RADIO(mode=sx127x.LORA)
+tr = sx127x.RADIO(mode=sx127x.FSK)
 #tr = sx127x.RADIO(mode=sx127x.OOK)
 
 tr.setFrequency(434000,000) # kHz, Hz
-tr.setPower(17, True)       # power +17dBm (RFO pin if False or PA_BOOST pin if True)
+tr.setPower(10, True)       # power +17dBm (RFO pin if False or PA_BOOST pin if True)
 tr.setHighPower(False)      # add +3 dB (up to +20 dBm power on PA_BOOST pin)
-tr.setOCP(230, True)        # set OCP trimming (> 120 mA if High Power is on)
-tr.enableCRC(True, True)    # CRC=on (CrcAutoClearOff=on in FSK/OOK mode)
+tr.setOCP(120, True)        # set OCP trimming (> 120 mA if High Power is on)
+tr.enableCRC(True, False)   # CRC=on (CrcAutoClearOff=on in FSK/OOK mode)
 tr.setPllBW(1)              #  0=75, 1=150, 2=225, 3=300 kHz (LoRa/FSK/OOK)
 
 if tr.isLora(): # LoRa mode
@@ -92,7 +95,7 @@ if MODE == 1:
     while True:
         tr.blink()
         tr.send("Hello!")
-        time.sleep_ms(3000)
+        time.sleep_ms(1000)
 
 elif MODE == 2:
     # reseiver

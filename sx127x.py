@@ -727,41 +727,41 @@ class RADIO:
                 self.writeReg(REG_MODEM_CONFIG_1, config)
        
         
-    def setBitrate(self, bitrate=4800., frac=None):
+    def setBitrate(self, bitrate=4800.):
         """set bitrate [bit/s] (FSK/OOK)"""
-        if self._mode:
-            if bitrate:
-                code = int(round(FXOSC / bitrate)) # bit/s -> code
-                self.writeReg(REG_BITRATE_MSB,  (code >> 8) & 0xFF)
-                self.writeReg(REG_BITRATE_LSB,   code       & 0xFF)
-                if frac:
-                    self.writeReg(REG_BITRATE_FRAC, frac)
+        if self._mode == 1: # FSK
+            code = int(round((FXOSC * 16.) / bitrate)) # bit/s -> code/frac
+            self.writeReg(REG_BITRATE_MSB,  (code >> 12) & 0xFF)
+            self.writeReg(REG_BITRATE_LSB,  (code >> 4)  & 0xFF)
+            self.writeReg(REG_BITRATE_FRAC,  code        & 0x0F)
+        elif self._mode == 2: # OOK
+            code = int(round(FXOSC / bitrate)) # bit/s -> code
+            self.writeReg(REG_BITRATE_MSB,  (code >> 8) & 0xFF)
+            self.writeReg(REG_BITRATE_LSB,   code       & 0xFF)
+            self.writeReg(REG_BITRATE_FRAC, 0)
 
 
     def setFdev(self, fdev=5000.):
         """set frequency deviation (FSK)"""
         if self._mode:
-            if fdev:
-                code = int(round(fdev / FSTEP)) # Hz -> code
-                code = min(max(code, 0), 0x3FFF)
-                self.writeReg(REG_FDEV_MSB, (code >> 8) & 0xFF)
-                self.writeReg(REG_FDEV_LSB,  code       & 0xFF)
+            code = int(round(fdev / FSTEP)) # Hz -> code
+            code = min(max(code, 0), 0x3FFF)
+            self.writeReg(REG_FDEV_MSB, (code >> 8) & 0xFF)
+            self.writeReg(REG_FDEV_LSB,  code       & 0xFF)
 
 
     def setRxBW(self, bw=10.4):
         """set RX BW [kHz] (FSK/OOK)"""
         if self._mode:
-            if bw:
-                m, e = getRxBw(bw)
-                self.writeReg(REG_RX_BW, (m << 3) | e)
+            m, e = getRxBw(bw)
+            self.writeReg(REG_RX_BW, (m << 3) | e)
 
 
     def setAfcBW(self, bw=2.6):
         """set AFC BW [kHz] (FSK/OOK)"""
         if self._mode:
-            if bw:
-                m, e = getRxBw(bw)
-                self.writeReg(REG_AFC_BW, (m << 3) | e)
+            m, e = getRxBw(bw)
+            self.writeReg(REG_AFC_BW, (m << 3) | e)
 
 
     def enableAFC(self, afc=True):
@@ -844,7 +844,7 @@ class RADIO:
         size = len(buf)
         
         if self._mode == 0: # LoRa mode
-            self.implicitHeaderMode(implicitHeader)
+            self.setImplicitHeaderMode(implicitHeader)
 
             # set FIFO TX base address
             self.writeReg(REG_FIFO_ADDR_PTR, FIFO_TX_BASE_ADDR)
@@ -870,6 +870,7 @@ class RADIO:
             self.writeReg(REG_IRQ_FLAGS, IRQ_TX_DONE)
            
         else: # FSK/OOK mode
+            self.setFixedLen(implicitHeader) # FIXME: bad code view
             size = min(size, MAX_PKT_LENGTH) # limit size
 
             # set TX start FIFO condition
@@ -879,12 +880,12 @@ class RADIO:
             while ((self.readReg(REG_IRQ_FLAGS_2) & IRQ2_FIFO_EMPTY) == 0):
                 pass # FIXME: check timeout
 
-            if self.readReg(REG_PACKET_CONFIG_1) & 0x80: # `PacketFormat`
-                self.writeReg(REG_FIFO, size) # variable length
-                #add = 1
-            else:
+            if self._fixedLen:
                 self.writeReg(REG_PAYLOAD_LEN, size) # fixed length
                 #add = 0
+            else:
+                self.writeReg(REG_FIFO, size) # variable length
+                #add = 1
             
             # set TX start FIFO condition
             #self.writeReg(REG_FIFO_THRESH, TX_START_FIFO_LEVEL | (size + add))
