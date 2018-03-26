@@ -833,7 +833,7 @@ class RADIO:
     #            self._lock = False
     
             
-    def send(self, string, implicitHeader=False):
+    def send(self, string, implicitHeader=True):
         """send packet (LoRa/FSK/OOK)"""
         #self.aquire_lock(True)  # wait until RX_Done, lock and begin writing.
         self.setMode(MODE_STDBY)
@@ -843,20 +843,18 @@ class RADIO:
         if self._mode == 0: # LoRa mode
             self.implicitHeaderMode(implicitHeader)
 
-            # reset FIFO address and paload length 
+            # set FIFO TX base address
             self.writeReg(REG_FIFO_ADDR_PTR, FIFO_TX_BASE_ADDR)
-            self.writeReg(REG_PAYLOAD_LENGTH, 0)
 
             # check size
-            currentLength = self.readReg(REG_PAYLOAD_LENGTH)
-            size = min(size, (MAX_PKT_LENGTH - FIFO_TX_BASE_ADDR - currentLength))
+            size = min(size, MAX_PKT_LENGTH)
 
             # write data
             for i in range(size):
                 self.writeReg(REG_FIFO, buf[i])
         
-            # update length        
-            self.writeReg(REG_PAYLOAD_LENGTH, currentLength + size)
+            # set length
+            self.writeReg(REG_PAYLOAD_LENGTH, size)
 
             # start TX packet
             self.setMode(MODE_TX) # put in TX mode
@@ -869,7 +867,7 @@ class RADIO:
             self.writeReg(REG_IRQ_FLAGS, IRQ_TX_DONE)
            
         else: # FSK/OOK mode
-            size = min(size, 256) # limit size FIXME
+            size = min(size, MAX_PKT_LENGTH) # limit size
 
             # set TX start FIFO condition
             #self.writeReg(REG_FIFO_THRESH, TX_START_FIFO_NOEMPTY)
