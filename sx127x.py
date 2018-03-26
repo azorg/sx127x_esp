@@ -145,7 +145,7 @@ MODE_LOW_FREQ_MODE_ON = 0b1000 # (0x08) `LowFrequencyModeOn`
 
 # bits 6-5 `ModulationType` [FSK/OOK modes only]
 MODE_FSK    = 0b00000000 # (0x00) 0b00 -> FSK
-MODE_OOK    = 0b00100000 # (0x40) 0b01 -> OOK
+MODE_OOK    = 0b00100000 # (0x20) 0b01 -> OOK
 MODES_MASK2 = 0b01100000 # (0x60) Modes bit mask 2 
 
 # bit 6 (allows access to FSK registers in 0x0D:0x3F in LoRa mode)
