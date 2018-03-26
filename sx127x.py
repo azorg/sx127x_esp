@@ -246,7 +246,7 @@ class RADIO:
                          'ldro':             None,   # Low Data Rate Optimize (None - automatic)
                          'sw':               0x12,   # Sync Word (allways 0x12)
                          'preamble':         8,      # 6...65535
-                         'implicit_header':  False,
+                         'implicit_header':  True,
                          # FSK/OOK mode:
                          'bitrate':          4800., # bit/s
                          'fdev':             5000., # frequency deviation [Hz]
