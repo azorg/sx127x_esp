@@ -246,7 +246,7 @@ class RADIO:
                          'ldro':             None,   # Low Data Rate Optimize (None - automatic)
                          'sw':               0x12,   # Sync Word (allways 0x12)
                          'preamble':         8,      # 6...65535
-                         'implicit_header':  True,
+                         'implicit_header':  False,
                          # FSK/OOK mode:
                          'bitrate':          4800., # bit/s
                          'fdev':             5000., # frequency deviation [Hz]
@@ -715,7 +715,7 @@ class RADIO:
             self.writeReg(REG_SYNC_WORD, sw)
          
     
-    def implicitHeaderMode(self, implicitHeaderMode=False):
+    def implicitHeaderMode(self, implicitHeaderMode=True):
         """set implicitHeaderMode (LoRa)"""
         if self._mode == 0:
             if self._implicitHeaderMode != implicitHeaderMode: # set value only if different
@@ -833,7 +833,7 @@ class RADIO:
     #            self._lock = False
     
             
-    def send(self, string, implicitHeader=True):
+    def send(self, string, implicitHeader=False):
         """send packet (LoRa/FSK/OOK)"""
         #self.aquire_lock(True)  # wait until RX_Done, lock and begin writing.
         self.setMode(MODE_STDBY)
@@ -917,12 +917,13 @@ class RADIO:
             self.pin_dio0.irq(trigger=0, handler=None)
         
 
-    def receive(self, size=MAX_PKT_LENGTH):
+    def receive(self, size=0):
         """go to RX mode; wait callback by interrupt (LoRa/FSK/OOK)"""
         if self._mode == 0: # LoRa mode
+            self.implicitHeaderMode(size > 0)
             if size > 0:
-                self.implicitHeaderMode(True)
-                self.writeReg(REG_PAYLOAD_LENGTH, size & 0xFF)  
+                size = min(size, MAX_PKT_LENGTH)
+                self.writeReg(REG_PAYLOAD_LENGTH, size)
         else: # FSK/OOK mode
             if (self.readReg(REG_PACKET_CONFIG_1) & 0x80) == 0: # check `PacketFormat`
                 self.writeReg(REG_PAYLOAD_LEN, max(1, size)) # fixed length
