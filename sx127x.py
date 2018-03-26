@@ -932,6 +932,8 @@ class RADIO:
             self.setFixedLen(size > 0)
             if size > 0:
                 self.writeReg(REG_PAYLOAD_LEN, size) # fixed length
+            else:
+                self.writeReg(REG_PAYLOAD_LEN, MAX_PKT_LENGTH) # variable length
         self.setMode(MODE_RX_CONTINUOUS)
                  
                  
