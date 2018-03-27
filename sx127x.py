@@ -596,7 +596,7 @@ class RADIO:
         self.writeReg(REG_PA_RAMP, reg)
 
 
-    def enableCRC(self, crc=True, crcAutoClearOff=False):
+    def enableCRC(self, crc=True, crcAutoClearOff=True):
         """enable/disable CRC (and set CrcAutoClearOff in FSK/OOK mode)"""
         self._crc = crc
         if self._mode == 0: # LoRa mode

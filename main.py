@@ -88,21 +88,31 @@ tr.collect()
 
 # LOOK HERE and CHANGE!!!
 #MODE = 0 # do nothing
-#MODE = 1 # transmitter
-MODE = 2 # receiver
+MODE = 1 # transmitter
+#MODE = 2 # receiver
 #MODE = 3 # morse transmitter in continuous mode
+
+# implicit header (LoRa) or fixed packet length (FSK/OOK)
+#FIXED = True
+FIXED = False
 
 if MODE == 1:
     # transmitter
     while True:
         tr.blink()
-        tr.send("Hello!", True) # True - fixed packet length
+        tr.send("Hello!", FIXED)
         time.sleep_ms(1000)
 
 elif MODE == 2:
     # reseiver
     tr.onReceive(on_receive) # set the receive callback
-    tr.receive(6) # go into receive mode, 6=size("Hello!")
+
+    # go into receive mode
+    if FIXED:
+        tr.receive(6) # implicit header / fixed size: 6=size("Hello!")
+    else:
+        tr.receive(0) # explicit header / variable packet size
+
     time.sleep(-1) # wait interrupt
 
 
