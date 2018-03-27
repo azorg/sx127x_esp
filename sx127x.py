@@ -836,7 +836,7 @@ class RADIO:
     #            self._lock = False
     
             
-    def send(self, string, implicitHeader=False):
+    def send(self, string, fixed=False):
         """send packet (LoRa/FSK/OOK)"""
         #self.aquire_lock(True)  # wait until RX_Done, lock and begin writing.
         self.setMode(MODE_STDBY)
@@ -844,7 +844,7 @@ class RADIO:
         size = len(buf)
         
         if self._mode == 0: # LoRa mode
-            self.setImplicitHeaderMode(implicitHeader)
+            self.setImplicitHeaderMode(fixed)
 
             # set FIFO TX base address
             self.writeReg(REG_FIFO_ADDR_PTR, FIFO_TX_BASE_ADDR)
@@ -870,7 +870,7 @@ class RADIO:
             self.writeReg(REG_IRQ_FLAGS, IRQ_TX_DONE)
            
         else: # FSK/OOK mode
-            self.setFixedLen(implicitHeader) # FIXME: bad code view
+            self.setFixedLen(fixed)
             size = min(size, MAX_PKT_LENGTH) # limit size
 
             # set TX start FIFO condition
@@ -997,6 +997,9 @@ class RADIO:
 
         #self.aquire_lock(False)
         
+    def dump(self):
+        for i in range(128):
+            print("Reg[0x%02X] = 0x%02X" % (i, self.readReg(i)))
             
 
 #*** end of "sx127x.py" module ***#

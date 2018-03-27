@@ -42,3 +42,6 @@
  * fix send()
  * update receive()
 
+2018.03.27
+ + add dump()
+
