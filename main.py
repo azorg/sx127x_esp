@@ -54,12 +54,12 @@ def on_receive(tr, payload, crcOk):
 
 
 # init SX127x RF module
-tr = sx127x.RADIO(mode=sx127x.LORA)
+#tr = sx127x.RADIO(mode=sx127x.LORA)
 #tr = sx127x.RADIO(mode=sx127x.FSK)
-#tr = sx127x.RADIO(mode=sx127x.OOK)
+tr = sx127x.RADIO(mode=sx127x.OOK)
 
-tr.setFrequency(434000,000) # kHz, Hz
-tr.setPower(10, True)       # power +17dBm (RFO pin if False or PA_BOOST pin if True)
+tr.setFrequency(433990,000) # kHz, Hz
+tr.setPower(10, True)       # power dBm (RFO pin if False or PA_BOOST pin if True)
 tr.setHighPower(False)      # add +3 dB (up to +20 dBm power on PA_BOOST pin)
 tr.setOCP(120, True)        # set OCP trimming (> 120 mA if High Power is on)
 tr.enableCRC(True, True)    # CRC, CrcAutoClearOff (FSK/OOK mode)
@@ -88,9 +88,10 @@ tr.collect()
 
 # LOOK HERE and CHANGE!!!
 #MODE = 0 # do nothing
-MODE = 1 # transmitter
+#MODE = 1 # transmitter
 #MODE = 2 # receiver
 #MODE = 3 # morse transmitter in continuous mode
+MODE = 4 # beeper
 
 # implicit header (LoRa) or fixed packet length (FSK/OOK)
 #FIXED = True
@@ -123,7 +124,7 @@ t_dot   = 150  # ms
 t_line  = 450  # ms
 t_space = 450  # ms
 
-if MODE == 0 or MODE == 3:
+if MODE == 0 or MODE == 3 or MODE == 4:
     DATA = Pin(16, Pin.OUT) # DIO2/DATA
     #DCLK = Pin(0, Pin.IN)  # DIO1/DCLK
 
@@ -155,13 +156,26 @@ def morse_send(msg):
 
 if MODE == 3:
     # morse transmitter in continuous FSK/OOK mode
-    tr.init(mode=sx127x.OOK)
+    #tr.init(mode=sx127x.OOK)
     #tr.ook()
     #tr.fsk()
     tr.continuous()
     while True:
         morse_send(msg)
         delay(pause)
+
+if MODE == 4:
+    # beeper
+    data(0)
+    #tr.init(mode=sx127x.OOK)
+    tr.continuous()
+    while True:
+        tr.tx(True)
+        data(1)
+        delay(1000)
+        data(0)
+        tr.tx(False)
+        delay(3000)
 
 elif MODE == 0:
     # do "nothing"
