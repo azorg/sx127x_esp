@@ -54,11 +54,11 @@ def on_receive(tr, payload, crcOk):
 
 
 # init SX127x RF module
-#tr = sx127x.RADIO(mode=sx127x.LORA)
+tr = sx127x.RADIO(mode=sx127x.LORA)
 #tr = sx127x.RADIO(mode=sx127x.FSK)
-tr = sx127x.RADIO(mode=sx127x.OOK)
+#tr = sx127x.RADIO(mode=sx127x.OOK)
 
-tr.setFrequency(433990,000) # kHz, Hz
+tr.setFrequency(433000,000) # kHz, Hz
 tr.setPower(10, True)       # power dBm (RFO pin if False or PA_BOOST pin if True)
 tr.setHighPower(False)      # add +3 dB (up to +20 dBm power on PA_BOOST pin)
 tr.setOCP(120, True)        # set OCP trimming (> 120 mA if High Power is on)
@@ -67,9 +67,9 @@ tr.setPllBW(2)              #  0=75, 1=150, 2=225, 3=300 kHz (LoRa/FSK/OOK)
 
 if tr.isLora(): # LoRa mode
     tr.setBW(250.)    # BW: 7.8...500 kHz
-    tr.setCR(5)       # CR: 5..8
-    tr.setSF(7)       # SF: 6...12
-    tr.setLDRO(False) # Low Datarate Optimize
+    tr.setCR(8)       # CR: 5..8
+    tr.setSF(10)      # SF: 6...12
+    tr.setLDRO(True)  # Low Datarate Optimize
     tr.setPreamble(6) # 6..65535 (8 by default)
     tr.setSW(0x12)    # SW allways 0x12
 
@@ -88,10 +88,10 @@ tr.collect()
 
 # LOOK HERE and CHANGE!!!
 #MODE = 0 # do nothing
-#MODE = 1 # transmitter
+MODE = 1 # transmitter
 #MODE = 2 # receiver
 #MODE = 3 # morse transmitter in continuous mode
-MODE = 4 # beeper
+#MODE = 4 # beeper
 
 # implicit header (LoRa) or fixed packet length (FSK/OOK)
 #FIXED = True
