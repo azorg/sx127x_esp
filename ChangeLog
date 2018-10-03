@@ -45,3 +45,6 @@
 2018.03.27
  + add dump()
 
+2018.10.03
+ * fix error in "sx127x" modude near packet SNR/RSSI registors
+

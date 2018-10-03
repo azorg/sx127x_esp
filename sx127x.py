@@ -113,8 +113,9 @@ REG_FIFO_RX_BYTE_ADDR    = 0x25 # Address of last byte written in FIFO
 REG_IRQ_FLAGS_MASK = 0x11 # Optional IRQ flag mask
 REG_IRQ_FLAGS      = 0x12 # IRQ flags
 REG_RX_NB_BYTES    = 0x13 # Number of received bytes
+REG_PKT_SNR_VALUE  = 0x19 # SNR of last packet
 REG_PKT_RSSI_VALUE = 0x1A # RSSI of last packet
-REG_PKT_SNR_VALUE  = 0x1B # Current RSSI
+REG_LR_RSSI_VALUE  = 0x1B # Current RSSI
 REG_MODEM_CONFIG_1 = 0x1D # Modem PHY config 1
 REG_MODEM_CONFIG_2 = 0x1E # Modem PHY config 2
 REG_PREAMBLE_MSB   = 0x20 # Size of preamble (MSB)
@@ -615,17 +616,25 @@ class RADIO:
         return (self.readReg(REG_LNA) >> 5) & 0x07 # `LnaGain`
 
 
-    def getRSSI(self):
-        """get RSSI [dB]"""
+    def getPktRSSI(self):
+        """get Packet RSSI [dB] (LoRa)"""
         if self._mode == 0: # LoRa mode
             return self.readReg(REG_PKT_RSSI_VALUE) - \
                    (164. if self._freq < 600000000 else 157.)
         else: # FSK/OOK mode
             return -0.5 * self.readReg(REG_RSSI_VALUE)
 
+    def getRSSI(self):
+        """get RSSI [dB]"""
+        if self._mode == 0: # LoRa mode
+            return self.readReg(REG_LR_RSSI_VALUE) - \
+                   (164. if self._freq < 600000000 else 157.)
+        else: # FSK/OOK mode
+            return -0.5 * self.readReg(REG_RSSI_VALUE)
+
 
     def getSNR(self):
-        """get SNR [dB]"""
+        """get SNR [dB] (LoRa)"""
         if self._mode == 0: # LoRa mode
             snr = self.readReg(REG_PKT_SNR_VALUE)
             if snr & 0x80: # sign bit is 1

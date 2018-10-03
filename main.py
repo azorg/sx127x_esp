@@ -45,7 +45,7 @@ def on_receive(tr, payload, crcOk):
     tr.blink()
     payload_string = payload.decode()
     #payload_string = str(payload)
-    rssi = tr.getRSSI()
+    rssi = tr.getPktRSSI()
     snr  = tr.getSNR()
     print("*** Received message:")
     print(payload_string)
@@ -69,7 +69,7 @@ if tr.isLora(): # LoRa mode
     tr.setBW(250.)    # BW: 7.8...500 kHz
     tr.setCR(8)       # CR: 5..8
     tr.setSF(10)      # SF: 6...12
-    tr.setLDRO(True)  # Low Datarate Optimize
+    tr.setLDRO(False) # Low Datarate Optimize
     tr.setPreamble(6) # 6..65535 (8 by default)
     tr.setSW(0x12)    # SW allways 0x12
 
@@ -101,8 +101,8 @@ if MODE == 1:
     # transmitter
     while True:
         tr.blink()
-        tr.send("Hello!", FIXED)
-        time.sleep_ms(1000)
+        tr.send("Hello", FIXED)
+        time.sleep_ms(1900)
 
 elif MODE == 2:
     # reseiver
